@@ -1,0 +1,2 @@
+import {analyzeMelody,estimateChords} from './audio-analysis.js';
+onmessage=({data})=>{try{const fn=data.mode==='chords'?estimateChords:analyzeMelody;const result=data.mode==='chords'?fn(data.samples,data.sampleRate,data.options.bpm,p=>postMessage({progress:p})):fn(data.samples,data.sampleRate,data.options,p=>postMessage({progress:p}));postMessage({result});}catch(e){postMessage({error:e.message});}};

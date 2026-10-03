@@ -1,1 +1,9 @@
-{"name":"numbered-score-studio","version":"1.0.0","private":true,"type":"module","scripts":{"test":"node --test music.test.js"}}
+{
+  "name": "numbered-score-studio",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test music.test.js studio.test.js"
+  }
+}

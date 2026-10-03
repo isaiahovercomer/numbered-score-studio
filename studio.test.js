@@ -1,0 +1,13 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {fromTranscription,writtenEvents,parseChordChanges} from './score-bridge.js';
+import {wordBlob,parseVerses,token,layout} from './word-export.js';
+import {detectPitch,analyzeMelody,estimateChords} from './audio-analysis.js';
+import {arrange} from './music.js';
+const d={title:'Test <script>',target_key:'C',bpm_estimate:120,pickup_beats:0,notes:[{q:0,duration:20,midi:60},{q:20,duration:4,midi:62}],chords:[{q:0,text:'C7'}]};
+test('skill bridge preserves continuous tied melody and chord timing',()=>{const s=fromTranscription(d);assert.deepEqual(writtenEvents(s).events,d.notes);assert.deepEqual(s.sections.verse[1].tieFrom,[0]);assert.equal(arrange(s,'melody').ev.length,2);assert.equal(arrange(s,'melody').ev[0].d,5);});
+test('bad timing, unsupported accidental range and mismatched lyrics fail visibly',()=>{assert.throws(()=>fromTranscription({...d,notes:[{q:4,duration:4,midi:60}]}));assert.throws(()=>token(24,4,'C'));const s=fromTranscription(d);s.lyrics='太多歌詞';assert.throws(()=>wordBlob(s),/起音/);});
+test('Chinese stanza headings and punctuation are retained without counting as notes',()=>{assert.deepEqual(parseVerses('一、\n甲，乙。\n\n二、\n丙、丁。'),[['甲，','乙。'],['丙、','丁。']]);});
+test('Word is a native editable package with actual subscripts and escaped text',async()=>{const s=fromTranscription(d);s.lyrics='一、\n甲乙';const b=await wordBlob(s).arrayBuffer(),text=new TextDecoder().decode(b);assert.equal(new Uint8Array(b)[0],80);assert.match(text,/w:vertAlign w:val="subscript"/);assert.match(text,/9C2323/);assert.match(text,/01SMN/);assert.match(text,/Test &lt;script&gt;/);assert.match(text,/一、/);assert.doesNotMatch(text,/word\/media/);});
+test('within-bar chords validate and change accompaniment on their beats',()=>{const s=fromTranscription({target_key:'C',notes:[{q:0,duration:16,midi:60}]});s.sections.verse[0].chordChanges=parseChordChanges('C@0 G7@2',4);s.sections.verse[0].chord='C';assert.equal(arrange(s,'block').ev.filter(e=>e.part==='melody').length,1);assert.throws(()=>parseChordChanges('C@4',4));assert.throws(()=>parseChordChanges('C@0 F@0',4));});
+test('isolated 440 Hz is detected as A4, and silence is not a note',()=>{const sr=8000,y=Float32Array.from({length:16000},(_,i)=>.4*Math.sin(2*Math.PI*440*i/sr));assert.equal(detectPitch(y,100,768,sr).midi,69);assert.equal(detectPitch(new Float32Array(1024),0,768,sr).midi,null);assert.throws(()=>analyzeMelody(new Float32Array(16000),sr));});
+test('local chord estimator recognizes a synthetic C triad',()=>{const sr=8000,y=Float32Array.from({length:16000},(_,i)=>[60,64,67].reduce((a,m)=>a+.18*Math.sin(2*Math.PI*440*2**((m-69)/12)*i/sr),0));assert.equal(estimateChords(y,sr,120)[0].text,'C');});

@@ -51,12 +51,13 @@ export function validateScore(s){
 export function arrange(s,mode='ensemble',mix={},preview=false){
  const stats=validateScore(s),ev=[];let pos=0,count=0;
  function add(part,p,t,d,g,pan=0){if((mix[part]??1)>0)ev.push({part,p,t,d,g:g*(mix[part]??1),pan});}
- for(const f of s.form){for(const b of s.sections[f.section]){
+ for(const f of s.form){for(const b of playbackBars(s.sections[f.section])){
   if(preview&&count>=8)return {ev,seconds:pos*60/s.bpm+2,beats:pos};
   const beats=b.notes.reduce((a,n)=>a+n[1],0),base=pos;const rests=[];
-  for(const [p,d] of b.notes){if(p!==null)add('melody',p,pos,d,.88);else rests.push([pos,d]);pos+=d;}
+  for(const [index,[p,d]] of b.notes.entries()){if(p!==null){const prev=ev.findLast(e=>e.part==='melody');if(b.tieFrom?.includes(index)&&prev?.p===p&&Math.abs(prev.t+prev.d-pos)<1e-6)prev.d+=d;else add('melody',p,pos,d,.88);}else rests.push([pos,d]);pos+=d;}
   if(mode!=='melody'){
-   let c=s.chords?.[b.chord]||chordVoicing(b.chord||'');
+   if(!b.chord){if(b.lastSegment)count++;continue;}
+   let c=s.chords?.[b.chord]||chordVoicing(b.chord);
    if(!Number.isInteger(c.bass)||!Array.isArray(c.tones)||c.tones.length<3||c.tones.length>5||![c.bass,...c.tones].every(p=>Number.isInteger(p)&&p>=24&&p<=96))throw Error(`和絃 ${b.chord} 音高無效。`);
    const tones=[...c.tones].sort((a,b)=>a-b),level=Math.min(1.2,Math.max(.5,Number(f.intensity)||.9));
    if(mode==='block'){
@@ -72,7 +73,7 @@ export function arrange(s,mode='ensemble',mix={},preview=false){
     if(f.strings!==false)tones.slice(-2).forEach((p,j)=>add('violin',p,base,beats*.97,.13*level,j? .48:-.48));
     if(f.flute!==false&&rests.length){const [t,d]=rests.at(-1);tones.slice(-2).forEach((p,j)=>add('flute',p+12,t+j*d/2,d*.46,.20*level,.3));}
    }
-  }count++;
+  }if(b.lastSegment)count++;
  }}return {ev,seconds:stats.seconds,beats:stats.beats};
 }
 export function midiBytes(s,mode,mix){
@@ -87,4 +88,10 @@ export function midiBytes(s,mode,mix){
   if(!events.length)return;events.sort((a,b)=>a[0]-b[0]||a[1]-b[1]);const name=[...enc.encode(part)];let bytes=[0,255,3,...vlq(name.length),...name,0,192+ch,[0,0,42,48,73][ch]],last=0;
   for(const [t,on,p,v]of events){bytes.push(...vlq(t-last),(on?144:128)+ch,p,v);last=t;}bytes.push(0,255,47,0);tracks.push(chunk('MTrk',bytes));
  });return new Uint8Array([...enc.encode('MThd'),0,0,0,6,0,1,...be(tracks.length,2),1,224,...tracks.flat()]);
+}
+
+function playbackBars(bars){
+ const result=[];for(const bar of bars){const length=bar.notes.reduce((n,v)=>n+v[1],0),changes=bar.chordChanges?.length?bar.chordChanges:[{beat:0,text:bar.chord||''}];const points=[...new Set([0,...changes.map(c=>c.beat),length])].sort((a,b)=>a-b);
+ for(let i=0;i<points.length-1;i++){const start=points[i],end=points[i+1],out={lastSegment:i===points.length-2,notes:[],tieFrom:[],chord:changes.filter(c=>c.beat<=start).at(-1)?.text||'',beats:end-start};let at=0;for(const [j,n]of bar.notes.entries()){const a=Math.max(at,start),z=Math.min(at+n[1],end);if(z>a){if((a>at||bar.tieFrom?.includes(j))&&n[0]!==null)out.tieFrom.push(out.notes.length);out.notes.push([n[0],z-a]);}at+=n[1];}result.push(out);}}
+ return result;
 }
