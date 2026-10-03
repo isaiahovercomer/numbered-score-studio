@@ -1,0 +1,18 @@
+Salamander Grand Piano by Alexander Holm. Source: https://github.com/sfzinstruments/SalamanderGrandPiano ; MP3 distribution: https://tonejs.github.io/audio/salamander/ ; CC BY 3.0 https://creativecommons.org/licenses/by/3.0/
+
+cello samples from tonejs-instruments, Nicholaus P. Brosowsky. Source: https://github.com/nbrosowsky/tonejs-instruments ; CC BY 3.0 https://creativecommons.org/licenses/by/3.0/
+
+violin samples from tonejs-instruments, Nicholaus P. Brosowsky. Source: https://github.com/nbrosowsky/tonejs-instruments ; CC BY 3.0 https://creativecommons.org/licenses/by/3.0/
+
+flute samples from tonejs-instruments, Nicholaus P. Brosowsky. Source: https://github.com/nbrosowsky/tonejs-instruments ; CC BY 3.0 https://creativecommons.org/licenses/by/3.0/
+
+Samples adapted by pitch shifting, envelopes, looping and mixing. Attribution does not imply endorsement.
+
+MP3 encoder: unmodified lamejs / LAME, LGPL.
+https://github.com/zhuker/lamejs
+https://lame.sourceforge.net
+License: vendor/LAME-LICENSE
+
+Example score: 信的路程
+https://isaiahtheovercomer.blogspot.com/2026/07/blog-post_16.html
+Rights remain with the respective authors.

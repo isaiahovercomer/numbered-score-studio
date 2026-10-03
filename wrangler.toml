@@ -1,0 +1,18 @@
+name = "numbered-score-reader"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+
+[vars]
+ALLOWED_ORIGIN = "https://isaiahovercomer.github.io"
+OPENAI_MODEL = "gpt-4.1"
+DAILY_LIMIT = "20"
+MONTHLY_LIMIT = "100"
+IP_DAILY_LIMIT = "2"
+
+[[durable_objects.bindings]]
+name = "QUOTA"
+class_name = "Quota"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Quota"]
