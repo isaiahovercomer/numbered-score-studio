@@ -207,3 +207,68 @@ test('詩歌證據：每條規則都附 hymnal.net（hn）與北投 PDF（ft）�
   for (const s of ['軟弱', '耽延', '毀謗', '群眾', '大衛', '燈台', '啟示', '啓示', '跟著祂', '藉著祂']) assert.equal(fix(s), s, s);
   assert.ok(!AUTO_RULES.some(r => /[輭躭譭羣衞]/.test(r.to)));
 });
+
+// ── Bugbot 審查回歸（PR #4）────────────────────────────────────────────────
+test('回歸：才能→纔能 排除人才、天才、口才、剛才等詞（人才能興起、天才能做不可改動）', () => {
+  for (const s of ['人才能興起', '天才能做', '口才能', '剛才能', '方才能', '奇才能', '英才能', '秀才能', '鬼才能', '全才能', '庸才能', '奴才能', '蠢才能', '賢才能', '通才能', '適才能', '文才能', '多才能'])
+    assert.ok(fix(s).includes('才能') && !fix(s).includes('纔'), `${s} 不可變成纔能`);
+  assert.equal(fix('人才能興起'), '人才能興起');
+  assert.equal(fix('天才能做').slice(0, 3), '天才能'); // 「做→作」是另一條規則，與「才能」無關
+  // 才幹義不改
+  for (const s of ['有才能', '無才能', '不是才能、勢力', '不靠才能站住', '倚靠才能，乃是靠主', '他的才能與恩賜', '才能和智慧']) assert.equal(fix(s), s, s);
+  // 「方始可以」義才改（官方 hn 纔能 61／才能 3、經文 7、綱目 1）
+  assert.equal(fix('我們才能得救'), '我們纔能得救');
+  assert.equal(fix('然後，才能進入'), '然後，纔能進入');
+  assert.equal(fix('成長才能成熟'), '成長纔能成熟');
+  // 沒被改的「才能」會留下待確認提示；改掉的不再提示
+  assert.ok(wordingHints('人才能興起', {applied: true}).some(h => h.includes('才能')));
+  assert.ok(!wordingHints('我們才能得救', {applied: true}).some(h => h.includes('才能')));
+  const r = AUTO_RULES.find(x => x.id === 'cai-neng');
+  for (const g of ['人', '天', '口', '剛', '方', '奇', '英', '秀', '鬼']) assert.ok(r.notBefore.includes(g), `cai-neng 缺少排除：${g}`);
+});
+
+test('回歸：嗎→麼 只換明確的句末語氣詞；是什麼嗎、這嗎、那嗎、嗎哪不可誤改', () => {
+  assert.equal(fix('你愛我嗎？'), '你愛我麼？');
+  assert.equal(fix('是屬天的嗎，還是屬地的嗎？'), '是屬天的麼，還是屬地的麼？');
+  assert.equal(fix('你愛我嗎'), '你愛我麼'); // 全文結尾
+  // 什麼→甚麼 之後不得變成「甚麼麼」；這嗎／那嗎／怎嗎／哪嗎不得變成「這麼」「那麼」
+  assert.equal(fix('是什麼嗎？'), '是甚麼嗎？');
+  assert.ok(!fix('是什麼嗎').includes('甚麼麼') && !fix('是甚麼嗎').includes('甚麼麼'));
+  for (const s of ['這嗎？', '那嗎？', '怎嗎？', '哪嗎？', '多嗎？', '嗎哪', '嗎哪，從天降下', '你吃嗎我說']) assert.ok(!fix(s).includes('這麼') && !fix(s).includes('那麼') && !fix(s).includes('嗎→'), s);
+  assert.equal(fix('這嗎？'), '這嗎？');
+  assert.equal(fix('那嗎'), '那嗎');
+  assert.equal(fix('嗎哪，從天降下'), '嗎哪，從天降下');
+  assert.equal(fix('你愛我嗎是的'), '你愛我嗎是的'); // 後面不是標點，不確定 → 不改，改為提示
+  assert.ok(wordingHints('是什麼嗎？', {applied: true}).some(h => h.includes('嗎')));
+  assert.ok(!wordingHints('你愛我嗎？', {applied: true}).some(h => h.includes('嗎')));
+});
+
+test('回歸：notationLayout 匯入的譜，替換次數不重複計算（標題＋歌詞各算一次；音節只是同一段歌詞）', () => {
+  const s = makeScore('預備好');
+  s.title = '預備';
+  s.notationLayout = {fingerprint: JSON.stringify([s.sections, s.key, s.lyrics]), systems: [{raw: '1/2/3/', note_q: [0, 8, 16], lyrics: [{syllables: ['預', '備', '好']}]}]};
+  const withRef = applyWordingToScore(s).changes;
+  const noRef = applyWordingToScore({...s, notationLayout: undefined}).changes;
+  assert.deepEqual(withRef, noRef, '有無 notationLayout 的回報必須相同');
+  assert.deepEqual(withRef.map(c => [c.from, c.count]), [['預備', 2]]); // 標題 1＋歌詞 1
+  assert.deepEqual(wordingChanges(s, {}).map(c => [c.from, c.count]), [['預備', 2]]);
+  assert.match(describeChanges(withRef), /預備→豫備×2/);
+  // 兩節歌詞、兩個系統：每節各算一次，不因音節再加倍
+  const s2 = makeScore('預備\n\n預備');
+  s2.title = '甲';
+  s2.notationLayout = {fingerprint: JSON.stringify([s2.sections, s2.key, s2.lyrics]), systems: [{raw: '1/2/', note_q: [0, 8], lyrics: [{syllables: ['預', '備']}, {syllables: ['預', '備']}]}]};
+  assert.deepEqual(applyWordingToScore(s2).changes.map(c => [c.from, c.count]), [['預備', 2]]);
+  // 音節確實被替換
+  assert.deepEqual(applyWordingToScore(s2).score.notationLayout.systems[0].lyrics[1].syllables, ['豫', '備']);
+});
+
+test('回歸：已自動替換的因著、為著不再列為待確認的「著」；仍留著的「著」才提示', () => {
+  const only = wordingHints('因著祂，為著祂', {applied: true});
+  assert.deepEqual(only, [], '因著、為著已替換，不應再出現待確認');
+  const mixed = wordingHints('因著祂，跟著祂', {applied: true});
+  assert.equal(mixed.length, 1);
+  assert.ok(mixed[0].includes('著'));
+  // 未套用時仍提醒可自動替換的項目與「著」
+  const off = wordingHints('因著祂', {applied: false});
+  assert.ok(off.some(h => h.includes('因着')) && off.some(h => h.includes('著')));
+});

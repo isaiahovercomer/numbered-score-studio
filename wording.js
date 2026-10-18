@@ -8,7 +8,8 @@ function replaceRule(text, r) {
   let out = '', last = 0, i = 0, n = 0;
   while ((i = text.indexOf(r.from, i)) !== -1) {
     const end = i + r.from.length;
-    const blocked = (r.notBefore || []).some(s => endsAt(text, s, i)) || (r.notAfter || []).some(s => startsAt(text, s, end));
+    const blocked = (r.notBefore || []).some(s => endsAt(text, s, i)) || (r.notAfter || []).some(s => startsAt(text, s, end))
+      || (r.needAfter && end < text.length && !r.needAfter.some(s => startsAt(text, s, end)));
     if (blocked) { i += 1; continue; }
     out += text.slice(last, i) + r.to; last = end; i = end; n++;
   }
@@ -67,15 +68,18 @@ export function applyWordingToScore(score, rules = AUTO_RULES) {
   const ref = score.notationLayout;
   if (ref && ref.fingerprint === JSON.stringify([score.sections, score.key, score.lyrics])) {
     const systems = ref.systems.map(s => ({...s, lyrics: (s.lyrics || []).map(v => ({...v}))}));
-    const verses = Math.max(0, ...systems.map(s => s.lyrics.length));
+    const verses = Math.max(0, ...systems.map(s => s.lyrics.length)), syl = [];
     for (let vi = 0; vi < verses; vi++) {
       const refs = systems.filter(s => s.lyrics[vi]?.syllables);
       const flat = refs.flatMap(s => s.lyrics[vi].syllables), res = applySyllables(flat, rules);
       let p = 0;
       for (const s of refs) { const n = s.lyrics[vi].syllables.length; s.lyrics[vi].syllables = res.syllables.slice(p, p + n); p += n; }
-      lists.push(res.changes);
+      syl.push(res.changes);
     }
     out.notationLayout = {...ref, systems, fingerprint: JSON.stringify([out.sections, out.key, out.lyrics])};
+    // 音節與歌詞是同一段文字：回報次數不可重複計算，取兩者較大者（通常相同）。
+    const lyricCounts = new Map(l.changes.map(c => [c.id, c.count]));
+    for (const c of mergeChanges(syl)) if (c.count > (lyricCounts.get(c.id) ?? 0)) lists.push([{...c, count: c.count - (lyricCounts.get(c.id) ?? 0)}]);
   }
   return {score: out, changes: mergeChanges(lists)};
 }
@@ -85,12 +89,14 @@ export function describeChanges(changes, limit = 8) {
   return items.length > limit ? items.slice(0, limit).join('、') + `…等 ${items.length} 項` : items.join('、');
 }
 
-// 提醒：applied=false（未套用自動替換）時，連同可自動替換的項目一併提示；applied=true 時只提示「待確認」項目。
+// 提醒：applied=false（未套用自動替換）時，連同可自動替換的項目一併提示；applied=true 時只提示「待確認」項目，
+// 且待確認項目是對「替換後」的文字檢查（已替換掉的因著、為著不會再被當成待確認的「著」）。
 export function wordingHints(text = '', {applied = false} = {}) {
   const hints = [];
   if (!applied) for (const r of AUTO_RULES) {
     if (applyWording(text, [r]).changes.length) hints.push(`「${r.from}」官方寫「${r.to}」`);
   }
-  for (const p of PENDING) if (!p.silent && p.match.some(m => text.includes(m))) hints.push(p.message);
+  const remaining = applied ? applyWording(text).text : text;
+  for (const p of PENDING) if (!p.silent && p.match.some(m => remaining.includes(m))) hints.push(p.message);
   return hints;
 }

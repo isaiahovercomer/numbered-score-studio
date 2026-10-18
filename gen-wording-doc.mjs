@@ -3,7 +3,7 @@ import {readFileSync, writeFileSync} from 'node:fs';
 import {AUTO_RULES, PENDING, SOURCES} from './wording-rules.js';
 const nm = {pdf: '綱目PDF', web: '網頁經文', guide: '指南', twgbr: '福音書房官網', about: '簡說', hehe: '和合本1919', intro: '恢復本簡介', hymnal: 'hymnal.net詩歌', ft: '北投詩歌PDF'};
 const row = r => {
-  const g = []; if (r.notBefore) g.push('前不接：' + r.notBefore.join('、')); if (r.notAfter) g.push('後不接：' + r.notAfter.join('、'));
+  const g = []; if (r.notBefore) g.push('前不接：' + r.notBefore.join('、')); if (r.notAfter) g.push('後不接：' + r.notAfter.join('、')); if (r.needAfter) g.push('後須接：' + r.needAfter.map(x => x === '\\n' ? '換行' : x).join('、') + '或全文結尾');
   return `| ${r.from} | ${r.to} | ${r.conf} | ${r.pdf.join('／')} | ${r.web.join('／')} | ${r.hn.join('／')} | ${r.ft.join('／')} | ${r.src.map(k => nm[k]).join('、')} | ${[r.note, g.length ? '（' + g.join('；') + '）' : ''].filter(Boolean).join(' ')} |\n`;
 };
 const head = '| 原稿 | 輸出 | 信心 | 綱目PDF | 網頁經文 | 詩歌hn | 詩歌北投PDF | 依據 | 備註 |\n|---|---|---|---|---|---|---|---|---|\n';
