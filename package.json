@@ -4,6 +4,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test music.test.js studio.test.js worker.test.js word-layout.test.js wording.test.js repo-hygiene.test.js"
+    "test": "node --test music.test.js studio.test.js worker.test.js word-layout.test.js wording.test.js repo-hygiene.test.js musicxml.test.js"
   }
 }

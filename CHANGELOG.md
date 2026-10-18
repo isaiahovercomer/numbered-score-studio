@@ -2,6 +2,11 @@
 
 格式依 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.1.0/)，版本號依 [語意化版本](https://semver.org/lang/zh-TW/)。
 
+## [未發佈]
+
+### 新增
+- **MusicXML 匯出**：「下載 MusicXML」輸出單一旋律聲部的 MusicXML 4.0（音高、時值、休止、延音、調號、拍號、速度、弱起、和弦、多節歌詞）；純新增模組 `musicxml.js`，零依賴，不改既有 Word／MIDI／MP3 輸出。
+
 ## [2.1.0] - 2026-10-18
 
 ### 新增
