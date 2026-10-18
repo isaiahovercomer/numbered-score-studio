@@ -1,8 +1,6 @@
 // 官方用字套用器。規則資料在 wording-rules.js；這裡只負責「不改原稿、只改輸出」的替換與回報。
 import {AUTO_RULES, PENDING} from './wording-rules.js';
 
-// 預設規則＝不含爭議項（見 wording-rules.js 的 dispute）。
-const CORE_RULES = AUTO_RULES.filter(r => !r.dispute);
 const startsAt = (text, s, i) => i >= 0 && text.startsWith(s, i);
 const endsAt = (text, s, end) => end - s.length >= 0 && text.slice(end - s.length, end) === s;
 
@@ -18,7 +16,7 @@ function replaceRule(text, r) {
 }
 
 // 對單一字串套用規則；回傳新字串與替換清單（原字串不被修改）。
-export function applyWording(text, rules = CORE_RULES) {
+export function applyWording(text, rules = AUTO_RULES) {
   let cur = String(text ?? ''); const changes = [];
   for (const r of rules) { const res = replaceRule(cur, r); if (res.n) { cur = res.text; changes.push({id: r.id, from: r.from, to: r.to, count: res.n}); } }
   return {text: cur, changes};
@@ -33,7 +31,7 @@ export function mergeChanges(lists) {
 const MARKER_LINE = /^([一二三四五六七八九十\d]+[、.．]|[\u2460-\u2473\u3251-\u325f\u32b1-\u32bf])$/;
 // 歌詞：同一段落內的換行不應阻斷詞組（如「預／備」折兩行），所以同一段合併後替換、再依原行長切回。
 // 因為每條規則前後等長，切回後每一行字數不變，逐字對位不受影響。
-export function applyWordingToLyrics(lyrics, rules = CORE_RULES) {
+export function applyWordingToLyrics(lyrics, rules = AUTO_RULES) {
   if (!lyrics) return {text: lyrics ?? '', changes: []};
   const lines = String(lyrics).split('\n'), result = [], all = [];
   let block = [];
@@ -62,7 +60,7 @@ function applySyllables(syllables, rules) {
 }
 
 // 對整份樂譜的「輸出內容」（標題、歌詞、參考資料音節）套用用字；原 score 不被修改。
-export function applyWordingToScore(score, rules = CORE_RULES) {
+export function applyWordingToScore(score, rules = AUTO_RULES) {
   const lists = [], out = {...score};
   const t = applyWording(score.title ?? '', rules); out.title = score.title === undefined ? score.title : t.text; lists.push(t.changes);
   const l = applyWordingToLyrics(score.lyrics, rules); out.lyrics = score.lyrics === undefined ? score.lyrics : l.text; lists.push(l.changes);
@@ -88,19 +86,11 @@ export function describeChanges(changes, limit = 8) {
 }
 
 // 提醒：applied=false（未套用自動替換）時，連同可自動替換的項目一併提示；applied=true 時只提示「待確認」項目。
-// 爭議項（dispute）只有在 applied 且 dispute 都為 true 時才會被替換，否則以 hint 說明為何不替換。
-export function wordingHints(text = '', {applied = false, dispute = false} = {}) {
+export function wordingHints(text = '', {applied = false} = {}) {
   const hints = [];
-  for (const r of AUTO_RULES) {
-    const active = applied && (!r.dispute || dispute);
-    if (active) continue;
-    if (applyWording(text, [r]).changes.length) hints.push(r.dispute && applied ? `「${r.from}」：${r.hint}` : `「${r.from}」官方寫「${r.to}」`);
+  if (!applied) for (const r of AUTO_RULES) {
+    if (applyWording(text, [r]).changes.length) hints.push(`「${r.from}」官方寫「${r.to}」`);
   }
   for (const p of PENDING) if (!p.silent && p.match.some(m => text.includes(m))) hints.push(p.message);
   return hints;
-}
-
-// 依選項取得實際套用的規則：wording 關閉＝無；爭議項需 dispute 開啟才套用。
-export function activeRules({wording = true, wordingDispute = false} = {}) {
-  return wording ? AUTO_RULES.filter(r => !r.dispute || wordingDispute) : [];
 }

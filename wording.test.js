@@ -3,12 +3,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {fromTranscription} from './score-bridge.js';
 import {wordBlob, wordingChanges, resolveOptions, parseVerses, layout, PRESETS} from './word-export.js';
-import {applyWording, applyWordingToLyrics, applyWordingToScore, describeChanges, wordingHints, activeRules} from './wording.js';
+import {applyWording, applyWordingToLyrics, applyWordingToScore, describeChanges, wordingHints} from './wording.js';
 import {AUTO_RULES, PENDING, SOURCES} from './wording-rules.js';
 
 const len = s => [...s].length;
 const fix = s => applyWording(s).text;
-const fixAll = s => applyWording(s, activeRules({wording: true, wordingDispute: true})).text;
 
 test('規則表：欄位完整、編號唯一、前後等長（逐字對位不變）、來源都登記過', () => {
   const ids = new Set();
@@ -33,6 +32,8 @@ test('冪等：官方原本就正確的寫法不變，重複套用結果相同',
 
 test('官方用字對照：裏、喫、甚麼、豫、召會、纔、彀、餧、咒詛、歎、惟、祕、眾、着', () => {
   const cases = [
+    ['在基督裡', '在基督裏'], ['裡面', '裏面'], ['那裡', '那裏'],
+    ['因著召會', '因着召會'], ['為著主', '為着主'],
     ['吃飯', '喫飯'], ['吃了祂', '喫了祂'], ['吃驚', '喫驚'],
     ['什麼', '甚麼'], ['什麽', '甚麼'],
     ['預備', '豫備'], ['預定', '豫定'], ['預言', '豫言'], ['預表', '豫表'], ['預先', '豫先'], ['預防', '豫防'], ['預告', '豫告'], ['預知', '豫知'], ['預約', '豫約'],
@@ -62,7 +63,7 @@ test('誤改防護：才（人才、天才、口才、剛才、方才、才能�
 });
 
 test('誤改防護：著名、著作、顯著、因著名、其他「著」、唯美、唯物、其他宗派教會、預期預算 不動', () => {
-  for (const s of ['著名', '著作', '顯著', '因著名而', '為著作權', '跟著祂', '藉著祂', '唯美', '唯物', '唯我獨尊', '天主教會', '羅馬教會', '基督教會', '預期', '預算', '預計', '他', '他們', '嗎哪', '做作', '有才能', '不靠才能站住', '倚靠才能，乃是', '才能、勢力', '他有才能的人', '你因著我', '裡面', '為著祂', '軟弱', '大衛', '啟示', '啓示']) assert.equal(fix(s), s, s);
+  for (const s of ['著名', '著作', '顯著', '因著名而', '為著作權', '跟著祂', '藉著祂', '唯美', '唯物', '唯我獨尊', '天主教會', '羅馬教會', '基督教會', '預期', '預算', '預計', '他', '他們', '嗎哪', '做作', '有才能', '不靠才能站住', '倚靠才能，乃是', '才能、勢力', '他有才能的人', '軟弱', '大衛', '啟示', '啓示']) assert.equal(fix(s), s, s);
 });
 
 test('回報：列出替換了哪些詞、各幾次；describeChanges 摘要', () => {
@@ -164,11 +165,9 @@ test('提醒：套用後只剩「待確認」項目；未套用時連同可自�
   const off = wordingHints(text), on = wordingHints(text, {applied: true});
   assert.ok(off.some(h => h.includes('裡') && h.includes('裏')) && off.some(h => h.includes('預備')));
   assert.ok(!on.some(h => h.startsWith('「預備」') || h.startsWith('「什麼」')));
-  // 套用後：爭議項（裡、因著）說明為何不替換；待確認項（他、著、預的其他詞）仍提醒
-  assert.ok(on.some(h => h.startsWith('「裡」：') && h.includes('詩歌')) && on.some(h => h.startsWith('「因著」：')));
+  // 套用後：待確認項（他、著、預的其他詞）仍提醒；裡、因著已自動替換，不再提醒
+  assert.ok(!on.some(h => h.startsWith('「裡」') || h.startsWith('「因著」')));
   assert.ok(on.some(h => h.includes('祂')) && on.some(h => h.includes('預')) && !on.some(h => h.includes('纔能') || h.includes('做→')));
-  const withDispute = wordingHints(text, {applied: true, dispute: true});
-  assert.ok(!withDispute.some(h => h.startsWith('「裡」') || h.startsWith('「因著」')));
   assert.deepEqual(wordingHints('在基督裏，我們喫祂', {applied: true}), []);
 });
 
@@ -180,27 +179,31 @@ test('文件同步：NOTATION_RULES.md 列出每一條自動替換規則與每�
   assert.match(doc, /「既／即」不在規則表/);
 });
 
-test('詩歌證據：詩歌多寫原字的項目（裡→裏、因著→因着、為著→為着）屬爭議項，預設不替換；開啟爭議選項才套用', async () => {
-  const disputed = AUTO_RULES.filter(r => r.dispute).map(r => r.id).sort();
-  assert.deepEqual(disputed, ['li', 'wei-zhe', 'yin-zhe']);
-  for (const r of AUTO_RULES.filter(x => x.dispute)) assert.ok(r.hint && r.hn[0] > r.hn[1] || r.hn[0] > 0, `${r.id} 需有詩歌證據`);
-  const text = '在基督裡，因著祂，為著祂';
-  assert.equal(fix(text), text);
-  assert.equal(fixAll(text), '在基督裏，因着祂，為着祂');
-  assert.equal(resolveOptions({}).wordingDispute, false);
-  assert.equal(resolveOptions({wordingDispute: true}).wordingDispute, true);
+test('使用者決定依官方 PDF：裡→裏、因著→因着、為著→為着 預設即替換（雖然詩歌多寫「裡」「著」），classic 仍預設關閉', async () => {
+  const ids = ['li', 'yin-zhe', 'wei-zhe'];
+  for (const id of ids) {
+    const r = AUTO_RULES.find(x => x.id === id);
+    assert.ok(r && !('dispute' in r), `${id} 不得再標為爭議`);
+    assert.ok(r.hn[0] > r.hn[1], `${id} 應如實列出詩歌證據（詩歌多寫原字）`);
+    assert.match(r.note, /依使用者決定以官方 PDF 為準/);
+  }
+  assert.equal(fix('在基督裡，因著祂，為著祂'), '在基督裏，因着祂，為着祂');
   const s = makeScore('裡預');
   s.title = '基督';
-  assert.ok(has(await bytesOf(s, {}), '>裡<'));
-  assert.ok(has(await bytesOf(s, {wordingDispute: true}), '>裏<'));
-  assert.deepEqual(wordingChanges(s, {wordingDispute: true}).map(c => c.from), ['裡']);
+  assert.ok(has(await bytesOf(s, {}), '>裏<') && !has(await bytesOf(s, {}), '>裡<'));
+  assert.ok(has(await bytesOf(s, {preset: 'classic'}), '>裡<'));
+  assert.deepEqual(wordingChanges(s, {}).map(c => c.from), ['裡']);
+  assert.deepEqual(wordingChanges(s, {preset: 'classic'}), []);
+  // 已無爭議項，因此沒有「爭議用字」選項
+  assert.equal(resolveOptions({}).wordingDispute, undefined);
+  assert.ok(!AUTO_RULES.some(r => 'dispute' in r));
 });
 
 test('詩歌證據：每條規則都附 hymnal.net（hn）與北投 PDF（ft）的出現次數；詩歌不用的舊字不在自動規則裡', () => {
   for (const r of AUTO_RULES) {
     assert.ok(Array.isArray(r.hn) && r.hn.length === 2 && Array.isArray(r.ft) && r.ft.length === 2, `${r.id} 缺 hn／ft`);
   }
-  // 詩歌多半不用的和合本舊字：輭、躭、譭、羣、大衞、啓示、着（因着、為着屬爭議項）都不得被自動替換
-  for (const s of ['軟弱', '耽延', '毀謗', '群眾', '大衛', '燈台', '啟示', '啓示', '跟著祂', '藉著祂']) assert.equal(fixAll(s), s, s);
+  // 詩歌多半不用的和合本舊字：輭、躭、譭、羣、大衞、啓示、着都不得被自動替換
+  for (const s of ['軟弱', '耽延', '毀謗', '群眾', '大衛', '燈台', '啟示', '啓示', '跟著祂', '藉著祂']) assert.equal(fix(s), s, s);
   assert.ok(!AUTO_RULES.some(r => /[輭躭譭羣衞]/.test(r.to)));
 });
