@@ -1,5 +1,5 @@
 import {fromTranscription,parseChordChanges,writtenEvents} from './score-bridge.js';
-import {wordBlob,parseVerses,PRESETS,PAPERS,wordingHints} from './word-export.js';
+import {wordBlob,parseVerses,PRESETS,PAPERS,wordingHints,wordingChanges,describeChanges} from './word-export.js';
 import {KEYS,chordVoicing} from './music.js';
 export function connectStudio({getScore,installScore,status,download,lock,isBusy}){
  const $=id=>document.getElementById(id);let audioFile,sourceUrl,analysisWorker,chordTimeline=[],generation=0;
@@ -14,11 +14,11 @@ export function connectStudio({getScore,installScore,status,download,lock,isBusy
  analysisWorker.onmessage=({data})=>{if(data.progress!==undefined){$('analysisProgress').value=data.progress*100;return;}try{if(data.error)throw Error(data.error);if(mode==='chords'){chordTimeline=data.result;$('chordTimeline').textContent=chordTimeline.map(c=>`${c.time.toFixed(2)} s　${c.text}`).join('\n');$('chordResults').hidden=false;$('analysisStatus').textContent='和弦估計完成，尚未覆蓋樂譜。請確認起點、速度及調性後套用。';}else{const s=fromTranscription(data.result);installScore(s);$('mode').value='melody';$('analysisStatus').textContent='旋律校對稿已載入。請先試聽，校正長音、休止與弱起，再加入歌詞。';status('單音辨識完成，請逐小節核對。');}}catch(e){$('analysisStatus').textContent=e.message;}finally{analysisWorker?.terminate();done();}};
  analysisWorker.postMessage({samples,sampleRate:sr,mode,options:{key:$('sourceKey').value,bpm,pickup:Number($('pickup').value),title:audioFile.name.replace(/\.[^.]+$/,'')}},[samples.buffer]);
  }catch(e){if(operation===generation){$('analysisStatus').textContent=e.message;done();}}};
- const wordOptions=()=>({preset:$('wordPreset').value,paper:$('wordPaper').value,verseMarks:$('wordMarks').value,tempo:$('wordTempo').checked,copyright:$('wordCopyright').value});
+ const wordOptions=()=>({preset:$('wordPreset').value,paper:$('wordPaper').value,verseMarks:$('wordMarks').value,tempo:$('wordTempo').checked,copyright:$('wordCopyright').value,wording:$('wordWording').checked});
  const wordHint=()=>{const o=wordOptions(),p=PRESETS[o.preset];$('wordHint').innerHTML=`${PAPERS[o.paper].name} · 01SMN 簡譜 · ${p.textFont}歌詞<br>深紅和弦／數字下標 · 詞譜整組置中`;};
- $('wordPreset').onchange=()=>{const p=PRESETS[$('wordPreset').value];$('wordPaper').value=p.paper;$('wordMarks').value=p.verseMarks;$('wordTempo').checked=p.tempo;wordHint();};
- for(const id of ['wordPaper','wordMarks','wordTempo'])$(id).onchange=wordHint;
- $('exportWord').onclick=()=>{try{const s=getScore(),o=wordOptions();download(wordBlob(s,o),(s.title||'詞譜')+'_'+PAPERS[o.paper].name+'.docx');const hints=wordingHints(s.lyrics);status('Word 已產生。請用安裝 01SMN 與'+PRESETS[o.preset].textFont+'的 Word 開啟；長譜可能分頁。'+(hints.length?'用字提醒（官方寫法，未自動改寫）：'+hints.join('；')+'。':''));}catch(e){status(e.message,true);}};
+ $('wordPreset').onchange=()=>{const p=PRESETS[$('wordPreset').value];$('wordPaper').value=p.paper;$('wordMarks').value=p.verseMarks;$('wordTempo').checked=p.tempo;$('wordWording').checked=p.wording;wordHint();};
+ for(const id of ['wordPaper','wordMarks','wordTempo','wordWording'])$(id).onchange=wordHint;
+ $('exportWord').onclick=()=>{try{const s=getScore(),o=wordOptions();download(wordBlob(s,o),(s.title||'詞譜')+'_'+PAPERS[o.paper].name+'.docx');const text=(s.title||'')+'\n\n'+(s.lyrics||''),changes=wordingChanges(s,o),hints=wordingHints(text,{applied:o.wording}),shown=hints.slice(0,4).join('；')+(hints.length>4?'…等 '+hints.length+' 項':'');status('Word 已產生。請用安裝 01SMN 與'+PRESETS[o.preset].textFont+'的 Word 開啟；長譜可能分頁。'+(o.wording?(changes.length?'已依官方用字輸出（只改輸出，原稿未動）：'+describeChanges(changes)+'。':'官方用字檢查：沒有需要替換的詞。'):'')+(hints.length?(o.wording?'待確認（未自動替換）：':'用字提醒（官方寫法，未自動改寫）：')+shown+'。':''));}catch(e){status(e.message,true);}};
  $('lyricFile').onchange=async e=>{try{const f=e.target.files[0];if(!f)return;if(f.size>100000)throw Error('歌詞檔請小於 100 KB。');let text=(await f.text()).replace(/^\uFEFF/,'');const s=getScore();if(text.trimStart().startsWith(s.title+'\n')||text.trimStart().startsWith(s.title+'\r\n'))text=text.trimStart().slice(s.title.length).trimStart();s.lyrics=text;installScore(s);updateCount();}catch(e){status(e.message,true);}finally{e.target.value='';}};
  function updateCount(){try{const s=getScore(),count=writtenEvents(s).events.filter(e=>e.midi!==null).length,verses=parseVerses(s.lyrics);$('lyricCount').textContent=`${count} 個起音`+(verses.length?` · ${verses.length} 節歌詞 · 各節 ${verses.map(v=>v.length).join('／')} 字`:' · 尚未加入歌詞');}catch{}}
  $('lyrics').addEventListener('input',updateCount);document.addEventListener('scorechange',updateCount);
