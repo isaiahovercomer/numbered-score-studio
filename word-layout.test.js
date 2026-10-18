@@ -212,6 +212,21 @@ test('[lsm] 末頁版權行：預設不加；指定文字時為相對頁面底�
   assert.match(xml, new RegExp(`<wp:posOffset>${Math.round((792 - 36.5) * 12700)}<\\/wp:posOffset>`));
 });
 
+test('[lsm] 版權行含 $&、$$、$` 等字元時原樣輸出，不會被當成取代樣式（Bugbot 回歸）', async () => {
+  const text = "A$&B$$C$`D$'E";
+  const base = await lsmXml();
+  const xml = await lsmXml(makeScore(), {copyright: text});
+  assert.ok(xml.includes("A$&amp;B$$C$`D$&apos;E"), '版權文字逐字保留（僅經 XML 跳脫）');
+  assert.equal((xml.match(/<\/w:p>/g) || []).length - (base.match(/<\/w:p>/g) || []).length, 1, '不得多出 </w:p>');
+});
+
+test('[css] 深色「帶走你的作品」面板內的 Word 版式選單有淺色文字與分隔線（Bugbot 回歸）', async () => {
+  const fs = await import('node:fs');
+  const css = fs.readFileSync(new URL('./style.css', import.meta.url), 'utf8');
+  assert.match(css, /\.mix-panel \.word-options summary[^{]*\{[^}]*color:#e5efdf/);
+  assert.match(css, /\.mix-panel \.word-options label[^{]*\{[^}]*color:#e5efdf/);
+});
+
 test('[lsm] 每行系統間距：單節歌詞≈58 pt（官方 57～58 pt）；每多一節 +19 pt', async () => {
   const one = makeScore(); one.lyrics = '甲乙';
   const xml1 = await lsmXml(one);
