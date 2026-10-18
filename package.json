@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test music.test.js studio.test.js worker.test.js word-layout.test.js wording.test.js word-edge.test.js repo-hygiene.test.js",
+    "test": "node --test music.test.js studio.test.js worker.test.js word-layout.test.js wording.test.js word-edge.test.js golden-docx.test.js repo-hygiene.test.js",
     "test:e2e": "node --test e2e/smoke.spec.mjs"
   },
   "devDependencies": {
