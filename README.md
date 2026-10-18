@@ -39,3 +39,7 @@ worker.js 是後端原始碼，wrangler.toml 包含環境變數與 QUOTA Durable
 目前不需新增 API key 或後端；既有圖片 AI 服務設定與限額保持原樣。僅圖片讀譜會送到既有服務，新的音訊分析和 Word 產生均在本機。程式只保留當前頁面的資料，離開前請「儲存樂譜」。
 
 排版偏好見 `NOTATION_RULES.md`。測試包含合成音高／和弦、連結延音、小節內和弦時點、歌詞字數、DOCX 原生下標與 XML escaping。另以私人歌曲實際測試 Chromium 390px／1440px、錄音解碼到 Word 下載、五節詞譜一頁渲染；私人音檔、歌詞與字型不納入 repository。
+
+## 測試與 CI
+
+`npm test` 另含 `word-layout.test.js`（鎖定 A4、標楷體 22pt／01SMN 14pt／歌詞 13.5pt、深紅 #9C2323 和弦與原生下標、DOCX 封包完整性）與 `repo-hygiene.test.js`（確認儲存庫沒有字型、私人音檔、歌詞、金鑰，`.gitignore` 與 config.json 符合規範）。`.github/workflows/test.yml` 會在每個 pull request 與推送到 main 時自動執行 `npm test`；工作流程不使用任何 secret。
