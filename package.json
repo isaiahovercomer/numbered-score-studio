@@ -4,6 +4,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test music.test.js studio.test.js"
+    "test": "node --test music.test.js studio.test.js worker.test.js"
   }
 }
