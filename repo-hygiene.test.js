@@ -3,8 +3,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { execFileSync } from 'node:child_process';
 
-const root = path.dirname(new URL(import.meta.url).pathname);
+const root = path.dirname(fileURLToPath(import.meta.url));
 const SKIP_DIRS = new Set(['.git', 'node_modules', '.wrangler']);
 function walk(dir, out = []) {
   for (const e of fs.readdirSync(dir, {withFileTypes: true})) {
@@ -14,7 +16,17 @@ function walk(dir, out = []) {
   }
   return out;
 }
-const files = walk(root);
+// 以 git 的視角列出「會進 repo」的檔案（已追蹤＋未追蹤但未被忽略），本機被 .gitignore 排除的私人檔案不影響測試。
+const files = (() => {
+  let inventory;
+  try {
+    inventory = execFileSync('git', ['ls-files', '-z', '--cached', '--others', '--exclude-standard'], {cwd: root, stdio: ['ignore', 'pipe', 'pipe']});
+  } catch (error) {
+    if (error.code === 'ENOENT' || /not a git repository/i.test(String(error.stderr))) return walk(root);
+    throw error;
+  }
+  return inventory.toString('utf8').split('\0').filter(f => f && fs.existsSync(path.join(root, f)));
+})();
 
 test('儲存庫不含字型檔（私人 01SMN 不得公開散布）', () => {
   const fonts = files.filter(f => /\.(ttf|otf|ttc|woff2?|eot)$/i.test(f) || /01SMN/i.test(path.basename(f)));
