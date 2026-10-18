@@ -42,8 +42,14 @@ worker.js 是後端原始碼，wrangler.toml 包含環境變數與 QUOTA Durable
 
 ## 測試與 CI
 
-`npm test` 另含 `word-layout.test.js`（鎖定兩種 Word 版式：原版式 classic 的 A4、標楷體 22pt／01SMN 14pt／歌詞 13.5pt，以及預設的水流職事站官方版式 lsm 的 Letter、32.5 pt 邊界、①②③ 節次、調號左拍號右、版權行；兩者共通的深紅 #9C2323 和弦與原生下標、DOCX 封包完整性）與 `repo-hygiene.test.js`（確認儲存庫沒有字型、私人音檔、歌詞、金鑰，`.gitignore` 與 config.json 符合規範）。`.github/workflows/test.yml` 會在每個 pull request 與推送到 main 時自動執行 `npm test`；工作流程不使用任何 secret。
+`npm test` 另含 `wording.test.js`（官方用字規則的資料一致性、誤改防護、只改輸出不改原稿、逐字對位不變）與 `word-layout.test.js`（鎖定兩種 Word 版式：原版式 classic 的 A4、標楷體 22pt／01SMN 14pt／歌詞 13.5pt，以及預設的水流職事站官方版式 lsm 的 Letter、32.5 pt 邊界、①②③ 節次、調號左拍號右、版權行；兩者共通的深紅 #9C2323 和弦與原生下標、DOCX 封包完整性）與 `repo-hygiene.test.js`（確認儲存庫沒有字型、私人音檔、歌詞、金鑰，`.gitignore` 與 config.json 符合規範）。`.github/workflows/test.yml` 會在每個 pull request 與推送到 main 時自動執行 `npm test`；工作流程不使用任何 secret。
 
 ## Word 版式（水流職事站官方 ／ 原版式）
 
-匯出 Word 前可在「Word 版式」選單選擇：預設為水流職事站官方標語歌版式（US Letter、32.5 pt 邊界、明體、①②③ 節次、左「D大調」右「4/4」、不顯示速度、可選末頁版權行）；也可切回原版式（A4、標楷體、一、二、三、），或個別覆寫紙張、節次樣式、是否顯示速度。完整對照見 `NOTATION_RULES.md`。程式介面：`wordBlob(score, {preset, paper, verseMarks, tempo, copyright})`。
+匯出 Word 前可在「Word 版式」選單選擇：預設為水流職事站官方標語歌版式（US Letter、32.5 pt 邊界、明體、①②③ 節次、左「D大調」右「4/4」、不顯示速度、可選末頁版權行）；也可切回原版式（A4、標楷體、一、二、三、），或個別覆寫紙張、節次樣式、是否顯示速度。完整對照見 `NOTATION_RULES.md`。程式介面：`wordBlob(score, {preset, paper, verseMarks, tempo, copyright, wording})`。
+
+### 官方用字（匯出時自動套用）
+
+「匯出時套用官方用字」開關會在 Word 輸出時把標題與歌詞改成台灣福音書房／水流職事站的用字，例如 裡→裏、吃→喫、什麼→甚麼、預備→豫備、教會→召會、能夠→能彀、唯一→惟一。lsm 版式預設開啟，classic 版式預設關閉，可隨時切換。**只改輸出**：編輯器裡的歌詞稿、JSON、MIDI 都不會被改，狀態列會列出替換了哪些詞。
+
+規則在 `wording-rules.js`（資料驅動，一條規則一個詞組，標明依據來源、官方 PDF 與網上新約恢復本的出現次數、信心度與不替換的前後文）。「既／即」等本來就正確的字不會被動，官方來源彼此不一致或無法由字面判斷的項目（他／祂、著／着、才能、做／作…）只提醒、不替換。完整對照表與來源見 `NOTATION_RULES.md`「官方用字」。調整規則只需改 `wording-rules.js`，並在 `wording.test.js` 補測試。
