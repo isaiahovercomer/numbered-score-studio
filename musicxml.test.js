@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {musicXml, musicXmlBlob, xmlText, MUSICXML_MIME} from './musicxml.js';
 import {midiBytes} from './music.js';
+import {writtenEvents} from './score-bridge.js';
 
 const base = (key, bars, extra = {}) => ({title: 't', key, bpm: 90, meter: [4, 4], lyrics: '', chords: {}, warnings: [], sections: {verse: bars}, form: [{section: 'verse'}], ...extra});
 const pitches = xml => [...xml.matchAll(/<step>(\w)<\/step>\s*(?:<alter>(-?\d)<\/alter>\s*)?<octave>(\d)<\/octave>/g)].map(m => m[1] + (m[2] ? (m[2] === '1' ? '#' : 'b') : '') + m[3]);
@@ -137,6 +138,27 @@ test('T12b 和弦 kind 對照與升降根音', () => {
   }
   assert.ok(flat(musicXml(base('C', [{chord: 'F#m', notes: [[60, 4]]}]))).includes('<root><root-step>F</root-step><root-alter>1</root-alter></root>'));
   assert.ok(flat(musicXml(base('C', [{chord: 'Bb', notes: [[60, 4]]}]))).includes('<root-alter>-1</root-alter>'));
+});
+
+test('和弦拍點取整不得誤報超出小節：beat 3.9（4/4）仍輸出 harmony，且 offset 不超出最後一音', () => {
+  const s = base('C', [{chordChanges: [{beat: 0, text: 'C'}, {beat: 3.9, text: 'G7'}], notes: [[60, 2], [62, 2]]}]);
+  assert.doesNotThrow(() => musicXml(s));
+  const x = flat(musicXml(s));
+  const harmonies = x.match(/<harmony>.*?<\/harmony>/g);
+  assert.equal(harmonies.length, 2);
+  assert.ok(harmonies[1].endsWith('<offset>7</offset></harmony>'), '夾回小節最後一個十六分格（第二音起點 8 ＋ 7 ＝ 15）');
+  assert.ok(x.indexOf(harmonies[1]) > x.indexOf('</note>'), '位於第二音之前、第一音之後');
+  assert.ok(x.indexOf(harmonies[1]) < x.lastIndexOf('<note>'));
+  // 與 Word 匯出的判斷一致：Word 接受的拍點，MusicXML 也接受
+  const edge = base('C', [{chord: 'C', chordChanges: [{beat: 3.99, text: 'F'}], notes: [[60, 1], [62, 3]]}]);
+  assert.doesNotThrow(() => writtenEvents(edge));
+  assert.doesNotThrow(() => musicXml(edge));
+  // 真正超出仍要報錯（含 Word 同樣拒絕的 beat=小節長度、負數、NaN）
+  for (const beat of [4, 4.01, -0.1, NaN]) {
+    const bad = base('C', [{chordChanges: [{beat, text: 'C'}], notes: [[60, 4]]}]);
+    assert.throws(() => musicXml(bad), {message: '和弦拍點超出小節。'}, `beat=${beat}`);
+    assert.throws(() => writtenEvents(bad), {message: '和弦拍點超出小節。'});
+  }
 });
 
 test('T13 不支援的和弦丟錯，訊息同 chordVoicing；拍點超出小節也丟錯', () => {

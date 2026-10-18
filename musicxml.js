@@ -92,10 +92,11 @@ export function musicXml(score, opts = {}) {
     const own = [];
     while (flat[cursor]?.bi === bi) own.push(flat[cursor++]);
     const length = own.reduce((a, n) => a + n.units, 0);
-    const changes = (bar.chordChanges?.length ? bar.chordChanges : (bar.chord ? [{beat: 0, text: bar.chord}] : []))
-      .map(c => ({q: Math.round(c.beat * DIVISIONS), text: c.text}));
-    for (const c of changes) harmony(c.text, 0); // 先驗證和弦符號
-    if (changes.some(c => !Number.isFinite(c.q) || c.q < 0 || c.q >= length)) throw Error('和弦拍點超出小節。');
+    const raw = bar.chordChanges?.length ? bar.chordChanges : (bar.chord ? [{beat: 0, text: bar.chord}] : []);
+    for (const c of raw) harmony(c.text, 0); // 先驗證和弦符號
+    // 範圍以原始拍數判斷（與 score-bridge.js 的 writtenEvents 相同）；取整只用來算 offset，並夾在小節內，避免 3.9 拍被取整成小節長度。
+    if (raw.some(c => !Number.isFinite(c.beat) || c.beat < 0 || c.beat >= length / DIVISIONS)) throw Error('和弦拍點超出小節。');
+    const changes = raw.map(c => ({q: Math.min(Math.round(c.beat * DIVISIONS), length - 1), text: c.text}));
     const used = new Set(), content = [];
     if (bi === 0) {
       content.push(el('attributes', null,
