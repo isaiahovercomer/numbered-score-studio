@@ -1,7 +1,7 @@
 import {KEYS,validateScore} from './music.js';
 import {writtenEvents} from './score-bridge.js';
 import {widths} from './font-metrics.js';
-import {applyWordingToScore,wordingHints} from './wording.js';
+import {applyWordingToScore,wordingHints,activeRules} from './wording.js';
 export {wordingHints,applyWording,applyWordingToScore,describeChanges} from './wording.js';
 const scale=[0,2,4,5,7,9,11],enc=new TextEncoder();
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
@@ -10,13 +10,13 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 // 兩者皆可個別覆寫 paper／verseMarks／tempo／copyright。官方量測不到的項目（01SMN 14pt、和弦字型字級顏色、音符間距）兩版共用現狀。
 export const PAPERS={letter:{w:12240,h:15840,name:'Letter'},a4:{w:11906,h:16838,name:'A4'}};
 export const PRESETS={
- lsm:{paper:'letter',verseMarks:'circled',tempo:false,keyStyle:'lsm',titleFont:'新細明體',titlePt:14,textFont:'新細明體',textAscii:'Times New Roman',lyricPt:12,metaPt:10,marginLR:650,marginTop:1140,marginBottom:650,rowBase:34,copyright:'',wording:true},
- classic:{paper:'a4',verseMarks:'chinese',tempo:true,keyStyle:'classic',titleFont:'標楷體',titlePt:22,textFont:'標楷體',textAscii:undefined,lyricPt:13.5,metaPt:11,marginLR:567,marginTop:567,marginBottom:567,rowBase:44,copyright:'',wording:false}};
+ lsm:{paper:'letter',verseMarks:'circled',tempo:false,keyStyle:'lsm',titleFont:'新細明體',titlePt:14,textFont:'新細明體',textAscii:'Times New Roman',lyricPt:12,metaPt:10,marginLR:650,marginTop:1140,marginBottom:650,rowBase:34,copyright:'',wording:true,wordingDispute:false},
+ classic:{paper:'a4',verseMarks:'chinese',tempo:true,keyStyle:'classic',titleFont:'標楷體',titlePt:22,textFont:'標楷體',textAscii:undefined,lyricPt:13.5,metaPt:11,marginLR:567,marginTop:567,marginBottom:567,rowBase:44,copyright:'',wording:false,wordingDispute:false}};
 export const DEFAULT_PRESET='lsm';
 export function resolveOptions(o={}){const base=PRESETS[o.preset]||PRESETS[DEFAULT_PRESET],r={...base};
- for(const k of ['paper','verseMarks','tempo','copyright','wording'])if(o[k]!==undefined&&o[k]!==null)r[k]=o[k];
+ for(const k of ['paper','verseMarks','tempo','copyright','wording','wordingDispute'])if(o[k]!==undefined&&o[k]!==null)r[k]=o[k];
  if(!PAPERS[r.paper])throw Error('紙張只支援 Letter 或 A4。');if(!['circled','chinese'].includes(r.verseMarks))throw Error('節次樣式只支援圈圈數字或中文數字。');
- r.copyright=String(r.copyright||'').trim().slice(0,120);r.tempo=Boolean(r.tempo);r.wording=Boolean(r.wording);r.preset=PRESETS[o.preset]?o.preset:DEFAULT_PRESET;
+ r.copyright=String(r.copyright||'').trim().slice(0,120);r.tempo=Boolean(r.tempo);r.wording=Boolean(r.wording);r.wordingDispute=Boolean(r.wordingDispute);r.preset=PRESETS[o.preset]?o.preset:DEFAULT_PRESET;
  const page=PAPERS[r.paper];r.pageW=page.w/20;r.pageH=page.h/20;r.usable=r.pageW-2*r.marginLR/20;r.wrapMax=r.usable-68.6;r.classic=r.keyStyle==='classic';return r;}
 const CN_MARKS=['一','二','三','四','五','六','七','八','九','十'];
 // ①～⑳（U+2460）、㉑～㉟（U+3251）、㊱～㊿（U+32B1）；超過 50 節退回「51、」。
@@ -61,8 +61,8 @@ function copyrightAnchor(text,o){const w=360,h=14;shapeId++;
 // 節次標記方塊：圈圈數字緊貼第一字左側；中文數字沿用原位置（左移 32 pt、寬 30 pt）。
 function markBox(vi,x,y,o){return o.verseMarks==='circled'?box(verseMark(vi,'circled'),x-16,y,16,19,o.textFont,o.lyricPt,'000000',false,o.textAscii):box(verseMark(vi,'chinese'),x-32,y,30,19,o.textFont,o.lyricPt,'000000',false,o.textAscii);}
 // 官方用字：只影響輸出（標題、歌詞、技能參考資料音節），呼叫端的原稿 score 不會被修改；前後等長，逐字對位不變。
-export function wordingChanges(s,options){return resolveOptions(options).wording?applyWordingToScore(s).changes:[];}
-export function wordBlob(s0,options){shapeId=0;const s=resolveOptions(options).wording?applyWordingToScore(s0).score:s0;const {systems,verses,offset,options:o}=layout(s,options);let body=headerXml(s,o,false);
+export function wordingChanges(s,options){const o=resolveOptions(options);return o.wording?applyWordingToScore(s,activeRules(o)).changes:[];}
+export function wordBlob(s0,options){shapeId=0;const ro=resolveOptions(options),s=ro.wording?applyWordingToScore(s0,activeRules(ro)).score:s0;const {systems,verses,offset,options:o}=layout(s,options);let body=headerXml(s,o,false);
  let tieStart=null;
  const reference=referenceBody(s,o);if(reference)body=reference;
  else for(const [ri,row]of systems.entries()){const height=o.rowBase+verses.length*19;let shapes='';

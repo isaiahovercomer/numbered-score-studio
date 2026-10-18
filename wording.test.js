@@ -3,11 +3,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {fromTranscription} from './score-bridge.js';
 import {wordBlob, wordingChanges, resolveOptions, parseVerses, layout, PRESETS} from './word-export.js';
-import {applyWording, applyWordingToLyrics, applyWordingToScore, describeChanges, wordingHints} from './wording.js';
+import {applyWording, applyWordingToLyrics, applyWordingToScore, describeChanges, wordingHints, activeRules} from './wording.js';
 import {AUTO_RULES, PENDING, SOURCES} from './wording-rules.js';
 
 const len = s => [...s].length;
 const fix = s => applyWording(s).text;
+const fixAll = s => applyWording(s, activeRules({wording: true, wordingDispute: true})).text;
 
 test('規則表：欄位完整、編號唯一、前後等長（逐字對位不變）、來源都登記過', () => {
   const ids = new Set();
@@ -32,11 +33,11 @@ test('冪等：官方原本就正確的寫法不變，重複套用結果相同',
 
 test('官方用字對照：裏、喫、甚麼、豫、召會、纔、彀、餧、咒詛、歎、惟、祕、眾、着', () => {
   const cases = [
-    ['在基督裡', '在基督裏'], ['裡面', '裏面'], ['吃飯', '喫飯'], ['吃了祂', '喫了祂'], ['吃驚', '喫驚'],
+    ['吃飯', '喫飯'], ['吃了祂', '喫了祂'], ['吃驚', '喫驚'],
     ['什麼', '甚麼'], ['什麽', '甚麼'],
     ['預備', '豫備'], ['預定', '豫定'], ['預言', '豫言'], ['預表', '豫表'], ['預先', '豫先'], ['預防', '豫防'], ['預告', '豫告'], ['預知', '豫知'], ['預約', '豫約'],
     ['教會', '召會'], ['地方教會', '地方召會'],
-    ['因著召會', '因着召會'], ['為著主', '為着主'],
+    ['你才能來', '你纔能來'], ['我們就夠了', '我們就彀了'], ['已夠', '已彀'], ['足夠', '足彀'], ['預嘗', '豫嘗'], ['你是屬天嗎', '你是屬天麼'], ['做事', '作事'], ['做主', '作主'],
     ['這樣才是', '這樣纔是'], ['我們才有', '我們纔有'], ['才可以', '纔可以'], ['你才會', '你纔會'],
     ['能夠', '能彀'], ['不夠', '不彀'], ['夠了', '彀了'], ['夠資格', '彀資格'],
     ['餵養', '餧養'], ['詛咒', '咒詛'], ['嘆息', '歎息'],
@@ -61,21 +62,21 @@ test('誤改防護：才（人才、天才、口才、剛才、方才、才能�
 });
 
 test('誤改防護：著名、著作、顯著、因著名、其他「著」、唯美、唯物、其他宗派教會、預期預算 不動', () => {
-  for (const s of ['著名', '著作', '顯著', '因著名而', '為著作權', '跟著祂', '藉著祂', '唯美', '唯物', '唯我獨尊', '天主教會', '羅馬教會', '基督教會', '預期', '預算', '預計', '他', '他們', '才能', '做事', '你愛我嗎', '軟弱', '大衛', '啟示', '啓示']) assert.equal(fix(s), s, s);
+  for (const s of ['著名', '著作', '顯著', '因著名而', '為著作權', '跟著祂', '藉著祂', '唯美', '唯物', '唯我獨尊', '天主教會', '羅馬教會', '基督教會', '預期', '預算', '預計', '他', '他們', '嗎哪', '做作', '有才能', '不靠才能站住', '倚靠才能，乃是', '才能、勢力', '他有才能的人', '你因著我', '裡面', '為著祂', '軟弱', '大衛', '啟示', '啓示']) assert.equal(fix(s), s, s);
 });
 
 test('回報：列出替換了哪些詞、各幾次；describeChanges 摘要', () => {
-  const r = applyWording('裡面裡面，什麼預備');
-  assert.deepEqual(r.changes.map(c => [c.from, c.to, c.count]), [['裡', '裏', 2], ['什麼', '甚麼', 1], ['預備', '豫備', 1]]);
-  assert.equal(describeChanges(r.changes), '裡→裏×2、什麼→甚麼、預備→豫備');
+  const r = applyWording('吃飯吃飯，什麼預備');
+  assert.deepEqual(r.changes.map(c => [c.from, c.to, c.count]), [['吃', '喫', 2], ['什麼', '甚麼', 1], ['預備', '豫備', 1]]);
+  assert.equal(describeChanges(r.changes), '吃→喫×2、什麼→甚麼、預備→豫備');
   assert.match(describeChanges(AUTO_RULES.map(x => ({from: x.from, to: x.to, count: 1})), 3), /…等 \d+ 項$/);
   assert.deepEqual(applyWording('在基督裏').changes, []);
 });
 
 test('歌詞：同段落換行不阻斷詞組；節標行不被合併；每行字數不變；CRLF 保留', () => {
-  const lyrics = '①在基督裡我們預\n備好了\n\n②什麼是\r\n教會的生活\n三、\n唯有\n祂';
+  const lyrics = '①在基督吃我們預\n備好了\n\n②什麼是\r\n教會的生活\n三、\n唯有\n祂';
   const {text, changes} = applyWordingToLyrics(lyrics);
-  assert.equal(text, '①在基督裏我們豫\n備好了\n\n②甚麼是\r\n召會的生活\n三、\n惟有\n祂');
+  assert.equal(text, '①在基督喫我們豫\n備好了\n\n②甚麼是\r\n召會的生活\n三、\n惟有\n祂');
   assert.deepEqual(text.split('\n').map(l => len(l)), lyrics.split('\n').map(l => len(l)));
   assert.ok(changes.length >= 5);
   // 節標行（三、）隔開，不會讓「…教會的生活」與「唯有」誤連成詞
@@ -84,13 +85,13 @@ test('歌詞：同段落換行不阻斷詞組；節標行不被合併；每行�
 });
 
 test('歌詞逐字對位：替換前後各節字數相同', () => {
-  const lyrics = '在基督裡預備\n教會能夠\n\n什麼是唯一';
+  const lyrics = '在基督吃預備\n教會能夠\n\n什麼是唯一';
   const before = parseVerses(lyrics).map(v => v.length), after = parseVerses(applyWordingToLyrics(lyrics).text).map(v => v.length);
   assert.deepEqual(after, before);
 });
 
 function makeScore(lyrics) {
-  const s = fromTranscription({title: '在基督裡', target_key: 'C', bpm_estimate: 120, pickup_beats: 0,
+  const s = fromTranscription({title: '在基督吃', target_key: 'C', bpm_estimate: 120, pickup_beats: 0,
     notes: [{q: 0, duration: 8, midi: 60}, {q: 8, duration: 8, midi: 62}], chords: [{q: 0, text: 'C'}]});
   s.lyrics = lyrics;
   return s;
@@ -99,12 +100,12 @@ const bytesOf = async (s, o) => Buffer.from(await wordBlob(s, o).arrayBuffer());
 const has = (buf, text) => buf.includes(Buffer.from(text, 'utf8'));
 
 test('只改輸出、不改原稿：applyWordingToScore 回傳新物件，原 score 完全未變', () => {
-  const s = makeScore('裡預');
+  const s = makeScore('吃預');
   const snapshot = structuredClone(s);
   const {score, changes} = applyWordingToScore(s);
   assert.deepEqual(s, snapshot);
-  assert.equal(s.title, '在基督裡'); assert.equal(s.lyrics, '裡預');
-  assert.equal(score.title, '在基督裏'); assert.equal(score.lyrics, '裏預'); // 單獨的「預」不是詞組，不替換
+  assert.equal(s.title, '在基督吃'); assert.equal(s.lyrics, '吃預');
+  assert.equal(score.title, '在基督喫'); assert.equal(score.lyrics, '喫預'); // 單獨的「預」不是詞組，不替換
   
   assert.ok(changes.length >= 1);
 });
@@ -130,17 +131,17 @@ test('版式預設：lsm 預設開啟官方用字；classic 預設關閉；可�
 
 test('Word 輸出：lsm 預設把標題與歌詞改成官方用字；關閉開關或 classic 預設則保持原樣', async () => {
   // 兩個起音：兩字歌詞
-  const s = makeScore('裡預');
+  const s = makeScore('吃預');
   const lsm = await bytesOf(s, {preset: 'lsm'});
-  assert.ok(has(lsm, '在基督裏') && has(lsm, '>裏<') && has(lsm, '>預<'));
-  assert.ok(!has(lsm, '在基督裡') && !has(lsm, '>裡<'));
+  assert.ok(has(lsm, '在基督喫') && has(lsm, '>喫<') && has(lsm, '>預<'));
+  assert.ok(!has(lsm, '在基督吃') && !has(lsm, '>吃<'));
   const off = await bytesOf(s, {preset: 'lsm', wording: false});
-  assert.ok(has(off, '在基督裡') && has(off, '>裡<'));
+  assert.ok(has(off, '在基督吃') && has(off, '>吃<'));
   const classic = await bytesOf(s, {preset: 'classic'});
-  assert.ok(has(classic, '在基督裡') && has(classic, '>裡<') && !has(classic, '裏'));
+  assert.ok(has(classic, '在基督吃') && has(classic, '>吃<') && !has(classic, '喫'));
   const classicOn = await bytesOf(s, {preset: 'classic', wording: true});
-  assert.ok(has(classicOn, '在基督裏') && has(classicOn, '>裏<'));
-  assert.equal(s.lyrics, '裡預');
+  assert.ok(has(classicOn, '在基督喫') && has(classicOn, '>喫<'));
+  assert.equal(s.lyrics, '吃預');
 });
 
 test('Word 輸出：歌詞字數受規則影響前後一致（不會因替換而報字數不符）', async () => {
@@ -151,19 +152,23 @@ test('Word 輸出：歌詞字數受規則影響前後一致（不會因替換而
 });
 
 test('wordingChanges：回傳實際替換清單；開關關閉時為空', () => {
-  const s = makeScore('裡預');
+  const s = makeScore('吃預');
   s.title = '甚麼是教會';
-  assert.deepEqual(wordingChanges(s, {}).map(c => c.from).sort(), ['教會', '裡']);
+  assert.deepEqual(wordingChanges(s, {}).map(c => c.from).sort(), ['吃', '教會']);
   assert.deepEqual(wordingChanges(s, {wording: false}), []);
   assert.deepEqual(wordingChanges(s, {preset: 'classic'}), []);
 });
 
 test('提醒：套用後只剩「待確認」項目；未套用時連同可自動替換項目一起提醒', () => {
-  const text = '裡面 什麼 預備 教會 跟著 他 才能 做 預算';
+  const text = '裡面 什麼 預備 教會 跟著 他 才能 做 預算 因著';
   const off = wordingHints(text), on = wordingHints(text, {applied: true});
-  assert.ok(off.some(h => h.includes('裡') && h.includes('裏')));
-  assert.ok(!on.some(h => h.startsWith('「裡」')));
-  assert.ok(on.some(h => h.includes('祂')) && on.some(h => h.includes('纔能')) && on.some(h => h.includes('做')) && on.some(h => h.includes('預')));
+  assert.ok(off.some(h => h.includes('裡') && h.includes('裏')) && off.some(h => h.includes('預備')));
+  assert.ok(!on.some(h => h.startsWith('「預備」') || h.startsWith('「什麼」')));
+  // 套用後：爭議項（裡、因著）說明為何不替換；待確認項（他、著、預的其他詞）仍提醒
+  assert.ok(on.some(h => h.startsWith('「裡」：') && h.includes('詩歌')) && on.some(h => h.startsWith('「因著」：')));
+  assert.ok(on.some(h => h.includes('祂')) && on.some(h => h.includes('預')) && !on.some(h => h.includes('纔能') || h.includes('做→')));
+  const withDispute = wordingHints(text, {applied: true, dispute: true});
+  assert.ok(!withDispute.some(h => h.startsWith('「裡」') || h.startsWith('「因著」')));
   assert.deepEqual(wordingHints('在基督裏，我們喫祂', {applied: true}), []);
 });
 
@@ -173,4 +178,29 @@ test('文件同步：NOTATION_RULES.md 列出每一條自動替換規則與每�
   for (const r of AUTO_RULES) assert.ok(doc.includes(`| ${r.from} | ${r.to} |`), `NOTATION_RULES.md 缺少：${r.from}→${r.to}`);
   for (const p of PENDING) assert.ok(doc.includes(p.message), `NOTATION_RULES.md 缺少待確認：${p.id}`);
   assert.match(doc, /「既／即」不在規則表/);
+});
+
+test('詩歌證據：詩歌多寫原字的項目（裡→裏、因著→因着、為著→為着）屬爭議項，預設不替換；開啟爭議選項才套用', async () => {
+  const disputed = AUTO_RULES.filter(r => r.dispute).map(r => r.id).sort();
+  assert.deepEqual(disputed, ['li', 'wei-zhe', 'yin-zhe']);
+  for (const r of AUTO_RULES.filter(x => x.dispute)) assert.ok(r.hint && r.hn[0] > r.hn[1] || r.hn[0] > 0, `${r.id} 需有詩歌證據`);
+  const text = '在基督裡，因著祂，為著祂';
+  assert.equal(fix(text), text);
+  assert.equal(fixAll(text), '在基督裏，因着祂，為着祂');
+  assert.equal(resolveOptions({}).wordingDispute, false);
+  assert.equal(resolveOptions({wordingDispute: true}).wordingDispute, true);
+  const s = makeScore('裡預');
+  s.title = '基督';
+  assert.ok(has(await bytesOf(s, {}), '>裡<'));
+  assert.ok(has(await bytesOf(s, {wordingDispute: true}), '>裏<'));
+  assert.deepEqual(wordingChanges(s, {wordingDispute: true}).map(c => c.from), ['裡']);
+});
+
+test('詩歌證據：每條規則都附 hymnal.net（hn）與北投 PDF（ft）的出現次數；詩歌不用的舊字不在自動規則裡', () => {
+  for (const r of AUTO_RULES) {
+    assert.ok(Array.isArray(r.hn) && r.hn.length === 2 && Array.isArray(r.ft) && r.ft.length === 2, `${r.id} 缺 hn／ft`);
+  }
+  // 詩歌多半不用的和合本舊字：輭、躭、譭、羣、大衞、啓示、着（因着、為着屬爭議項）都不得被自動替換
+  for (const s of ['軟弱', '耽延', '毀謗', '群眾', '大衛', '燈台', '啟示', '啓示', '跟著祂', '藉著祂']) assert.equal(fixAll(s), s, s);
+  assert.ok(!AUTO_RULES.some(r => /[輭躭譭羣衞]/.test(r.to)));
 });
