@@ -96,7 +96,8 @@ export function wordingHints(text = '', {applied = false} = {}) {
   if (!applied) for (const r of AUTO_RULES) {
     if (applyWording(text, [r]).changes.length) hints.push(`「${r.from}」官方寫「${r.to}」`);
   }
-  const remaining = applied ? applyWording(text).text : text;
+  // 與匯出相同的段落邏輯（同段換行串接後替換），提示才會與實際替換一致。
+  const remaining = applied ? applyWordingToLyrics(text).text : text;
   for (const p of PENDING) if (!p.silent && p.match.some(m => remaining.includes(m))) hints.push(p.message);
   return hints;
 }

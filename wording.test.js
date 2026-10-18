@@ -243,6 +243,16 @@ test('回歸：嗎→麼 只換明確的句末語氣詞；是什麼嗎、這嗎�
   assert.ok(!wordingHints('你愛我嗎？', {applied: true}).some(h => h.includes('嗎')));
 });
 
+test('回歸（Bugbot）：歌詞行尾沒有標點的「嗎」——輸出不改、提示仍會出現，兩者一致', () => {
+  const lyrics = '一、\n你愛我嗎\n我愛祢\n你愛我嗎？\n我愛祢';
+  const out = applyWordingToLyrics(lyrics);
+  assert.equal(out.text, lyrics.replace('嗎？', '麼？'), '只有後接「？」的嗎被換成麼；行尾無標點者保留');
+  assert.deepEqual(out.changes.map(c => [c.from, c.count]), [['嗎', 1]]);
+  assert.ok(wordingHints('你愛我嗎\n我愛祢', {applied: true}).some(h => h.includes('嗎')), '行尾無標點的嗎要提示待確認');
+  assert.ok(!wordingHints('你愛我嗎？\n我愛祢', {applied: true}).some(h => h.includes('嗎')), '已替換的嗎不再提示');
+  assert.ok(!wordingHints('標題\n\n你愛我嗎？\n我愛祢', {applied: true}).some(h => h.includes('嗎')));
+});
+
 test('回歸：notationLayout 匯入的譜，替換次數不重複計算（標題＋歌詞各算一次；音節只是同一段歌詞）', () => {
   const s = makeScore('預備好');
   s.title = '預備';
