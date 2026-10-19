@@ -2,6 +2,7 @@ import {connectStudio} from './studio.js';
 import {fromTranscription, parseChordChanges} from './score-bridge.js';
 import {parseNotes, formatNotes, chordVoicing, validateScore, midiBytes} from './music.js';
 import {renderAudio} from './audio.js';
+import {musicXmlBlob} from './musicxml.js';
 import {$} from './dom.js';
 import {buildMixer} from './mixer.js';
 import {transposeScore, buildForm} from './score-edit.js';
@@ -250,6 +251,13 @@ $('render').onclick = () => render(false);
 $('midi').onclick = () => {
   try {
     download(new Blob([midiBytes(currentScore(), $('mode').value, mix)], {type: 'audio/midi'}), safeName() + '.mid');
+  } catch (e) {
+    status(e.message, true);
+  }
+};
+$('musicxml').onclick = () => {
+  try {
+    download(musicXmlBlob(currentScore()), safeName() + '.musicxml');
   } catch (e) {
     status(e.message, true);
   }

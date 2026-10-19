@@ -32,6 +32,25 @@
 用字提醒（`wordingHints`）與自動替換見下方「官方用字」。
 歌詞檔可直接貼官方 ①②③ 節次，匯入時會被視為節標而剝除。
 
+## MusicXML 對照（`musicxml.js`，「下載 MusicXML」）
+
+單一旋律聲部的 MusicXML 4.0（`score-partwise`，未壓縮 `.musicxml`）。輸出具決定性，不寫日期；不套用官方用字替換，維持使用者原文。
+
+| 樂譜資料 | MusicXML |
+|---|---|
+| `title` | `<work-title>`（空白時為「簡譜」） |
+| `key`（12 個大調） | `<fifths>` ＋ `<mode>major</mode>`；音高依調性拼法（例：Gb 大調的 Cb），調外音升記號調用升、降記號調用降 |
+| `meter` | `<time>`；`bpm` → `<metronome>` ＋ `<sound tempo>` |
+| 音符 `[midi, 拍數]` | `<note>`，`divisions=4`（十六分音符格線）；非整格拍數會報錯 |
+| 5、7、9… 格等無法直接表示的時值 | 貪婪拆成多個音符，音以 tie 連結，休止不加 tie |
+| `休止（null）` | `<rest/>` |
+| `tieFrom`（可跨小節） | `<tie>` ＋ `<tied>`（start／stop） |
+| 第一小節不足一小節 | 弱起：`number="0" implicit="yes"`，其後從 1 起算 |
+| `chord`／`chordChanges` | `<harmony>`（9 種後綴與編輯器相同）；拍點不在音符起點時用 `<offset>`，不切斷音符；不輸出自訂 voicing |
+| `lyrics` | 逐字對位的 `<lyric number=節序>`（只輸出 `syllabic=single`）；歌詞字數須等於起音數，空白歌詞則不輸出 |
+
+限制：每個 section 只寫一次（不展開 `form` 反覆）；不輸出伴奏聲部；無小調與三連音；MusicXML 沒有簡譜原生表示，匯入 MuseScore 等軟體會是五線譜，簡譜版式仍以 Word 輸出為準。
+
 ## 官方用字
 
 ### 官方用字自動替換（`wording-rules.js`；lsm 版式預設開啟、classic 預設關閉）

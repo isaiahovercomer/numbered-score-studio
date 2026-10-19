@@ -28,7 +28,7 @@
 
 ## 4. 測試
 - **`npm test` 必須全過**（只用 Node 內建模組，不需安裝任何東西）；新行為要補測試，修 bug 要補「修正前會失敗」的回歸測試。
-- 主要測試：`music.test.js`、`studio.test.js`、`worker.test.js`、`word-layout.test.js`（鎖定兩種 Word 版式）、`word-edge.test.js`（高風險邊界）、`wording.test.js`（用字規則）、`golden-docx.test.js`（DOCX 位元組比對）、`score-edit.test.js`、`repo-hygiene.test.js`。新增測試檔記得加進 `package.json` 的 `test` 腳本。
+- 主要測試：`music.test.js`、`studio.test.js`、`worker.test.js`、`word-layout.test.js`（鎖定兩種 Word 版式）、`word-edge.test.js`（高風險邊界）、`wording.test.js`（用字規則）、`golden-docx.test.js`（DOCX 位元組比對）、`score-edit.test.js`、`musicxml.test.js`（MusicXML 匯出）、`repo-hygiene.test.js`。新增測試檔記得加進 `package.json` 的 `test` 腳本。
 - **刻意改變排版或用字規則**時，先改測試反映新規格，再 `UPDATE_GOLDEN=1 npm test` 更新 `golden-docx.json`，並在 PR 說明為何輸出改變。
 - 瀏覽器煙霧測試（可選）：`npm install && npm run test:e2e`（手機 390px／桌面 1440px，檢查無水平捲動、主要控制項可見、可匯出 Word／MIDI）。需要本機 Chrome（可用 `CHROME_PATH`）。CI 有獨立的 `e2e` job，不影響 `npm test`。
 - 改 UI 或拆檔時，除了測試，也用 Playwright 實際操作比對行為（重構 PR 的做法）。
@@ -42,6 +42,7 @@
 | `word-export.js` → `word-options.js`、`word-notation.js`、`word-docx.js` | Word：版面計算與 `wordBlob`；版式選項；簡譜記號與歌詞解析；DOCX／ZIP 底層 |
 | `wording.js`、`wording-rules.js`、`gen-wording-doc.mjs` | 官方用字替換（資料驅動）與 `NOTATION_RULES.md` 對照表產生器 |
 | `music.js`、`score-bridge.js`、`font-metrics.js` | 音樂理論與 MIDI、錄音／JSON 轉樂譜、01SMN 字寬表 |
+| `musicxml.js` | MusicXML 4.0 匯出（單一旋律聲部、歌詞、和弦；黃金檔在 `fixtures/`） |
 | `audio.js`、`audio-analysis.js`、`analysis-worker.js`、`encode-worker.js`、`lame.min.js` | 試聽與 MP3、音高與和弦分析、背景 Worker |
 | `worker.js`、`wrangler.toml` | Cloudflare Worker 後端（AI 讀譜、額度防護） |
 
@@ -49,7 +50,7 @@
 - 程式碼用 `.prettierrc.json` 的風格（單引號、寬 120）；新檔案請照此排版，不要寫超長單行。
 
 ## 6. 輸出與使用者偏好
-- 輸出：**可編輯的 DOCX**＋**MP3**＋**MIDI**＋**JSON**（儲存樂譜）。Word 由瀏覽器本機產生，不經遠端服務；只有圖片讀譜會送到後端。
+- 輸出：**可編輯的 DOCX**＋**MP3**＋**MIDI**＋**MusicXML**＋**JSON**（儲存樂譜）。Word 由瀏覽器本機產生，不經遠端服務；只有圖片讀譜會送到後端。
 - **全部繁體中文、手機友善**：390px 寬不得水平捲動，觸控目標至少 40px 高；介面要能在手機操作。
 - 簡譜字型 **01SMN 是私人字型**，Word 裝置自行安裝；網頁以一般文字預覽，不內嵌字型。
 - 和弦：Times New Roman、深紅 `#9C2323`，數字用 **Word 原生下標**；音符數字不可下標。
