@@ -323,3 +323,52 @@ test('[lsm] 技能參考資料（notationLayout）路徑同樣套用官方標題
   assert.match(classic, /1=C　4\/4　♩ = 120/);
   assert.match(classic, /一、/);
 });
+
+test('[lsm] 技能參考資料（notationLayout）路徑的和弦同樣顯示 ♯／♭', async () => {
+  const s = fromTranscription({...data, chords: [{q: 0, text: 'F#m'}, {q: 8, text: 'Bb'}]});
+  s.lyrics = '甲乙';
+  s.notationLayout = {
+    fingerprint: JSON.stringify([s.sections, s.key, s.lyrics]),
+    systems: [{raw: '1/2/', note_q: [0, 8], lyrics: [{syllables: ['甲', '乙']}]}]
+  };
+  const texts = xml => runs2(xml).filter(r => r.color === '9C2323').map(r => r.text);
+  assert.deepEqual(texts(await lsmXml(s)), ['F\u266Fm', 'B\u266D']);
+  assert.deepEqual(texts(await lsmXml(s, CLASSIC)), ['F#m', 'Bb']);
+});
+
+test('[lsm] 和弦升降記號顯示為 ♯／♭，品質字母不變；classic 維持 #／b', async () => {
+  const s = fromTranscription({
+    ...data,
+    notes: [
+      {q: 0, duration: 4, midi: 60},
+      {q: 4, duration: 4, midi: 62},
+      {q: 8, duration: 4, midi: 64},
+      {q: 12, duration: 4, midi: 65}
+    ],
+    chords: [
+      {q: 0, text: 'F#m'},
+      {q: 4, text: 'Bb'},
+      {q: 8, text: 'C#m7/G#'},
+      {q: 12, text: 'Dm'}
+    ]
+  });
+  const chordRuns = xml => runs2(xml).filter(r => r.ea === 'Times New Roman' && r.pt === 10);
+  assert.deepEqual(
+    chordRuns(await lsmXml(s)).map(r => [r.text, r.sub]),
+    [
+      ['F\u266Fm', false],
+      ['B\u266D', false],
+      ['C\u266Fm', false],
+      ['7', true],
+      ['/G\u266F', false],
+      ['Dm', false]
+    ]
+  );
+  const s2 = fromTranscription({...data, chords: [{q: 0, text: 'Bm7'}]});
+  assert.deepEqual(
+    chordRuns(await lsmXml(s2)).map(r => r.text),
+    ['Bm', '7']
+  );
+  const classic = chordRuns(await lsmXml(s, CLASSIC)).map(r => r.text);
+  assert.deepEqual(classic, ['F#m', 'Bb', 'C#m', '7', '/G#', 'Dm']);
+});
