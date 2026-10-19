@@ -25,7 +25,8 @@ test('控制字元（貼上時常夾帶的 U+000B、U+000C、U+0000）不得進�
     const s = makeScore(8, {title: 'a\u0001b\u0000c\u000bd\u000ce\ufffe'});
     s.lyrics = '一、\n甲乙丙丁戊己庚辛\u0001';
     const files = await parts(s, {...preset, copyright: 'x\u0001y'});
-    for (const [name, text] of Object.entries(files)) assert.doesNotMatch(text, INVALID_XML, `${preset.preset}：${name} 含非法 XML 字元`);
+    for (const [name, text] of Object.entries(files))
+      assert.doesNotMatch(text, INVALID_XML, `${preset.preset}：${name} 含非法 XML 字元`);
     assert.ok(texts(files['word/document.xml']).includes('abcde'), '合法文字仍保留、只拿掉控制字元');
   }
   // 版權行只在 lsm 版式出現
@@ -47,8 +48,10 @@ test('歌詞：表情符號（代理對）與前一字同一音節、CRLF 與 LF
   const s = makeScore(4);
   s.lyrics = '一、\n甲😀乙丙丁';
   assert.deepEqual(layout(s).verses, [['甲😀', '乙', '丙', '丁']]);
-  const lf = makeScore(4), crlf = makeScore(4);
-  lf.lyrics = '一、\n甲乙\n丙丁'; crlf.lyrics = '一、\r\n甲乙\r\n丙丁';
+  const lf = makeScore(4),
+    crlf = makeScore(4);
+  lf.lyrics = '一、\n甲乙\n丙丁';
+  crlf.lyrics = '一、\r\n甲乙\r\n丙丁';
   assert.deepEqual(layout(crlf).verses, layout(lf).verses);
   assert.equal(await docXml(crlf), await docXml(lf));
   const latin = makeScore(4);
@@ -59,7 +62,9 @@ test('歌詞：表情符號（代理對）與前一字同一音節、CRLF 與 LF
 test('空輸入：沒有歌詞或只有空白也能匯出純譜；沒有標題時使用「簡譜」', async () => {
   for (const preset of PRESETS) {
     for (const lyrics of ['', '   \n  \n']) {
-      const s = makeScore(8); s.title = ''; s.lyrics = lyrics;
+      const s = makeScore(8);
+      s.title = '';
+      s.lyrics = lyrics;
       const xml = await docXml(s, preset);
       assert.ok(texts(xml).includes('簡譜'), `${preset.preset}：空標題應顯示「簡譜」`);
       assert.deepEqual(layout(s, preset).verses, []);
@@ -68,11 +73,14 @@ test('空輸入：沒有歌詞或只有空白也能匯出純譜；沒有標題�
 });
 
 test('歌詞字數與音位不符時給出清楚的錯誤（含實際字數），不會輸出錯位的歌詞', async () => {
-  const short = makeScore(8); short.lyrics = '一、\n甲乙';
+  const short = makeScore(8);
+  short.lyrics = '一、\n甲乙';
   assert.throws(() => wordBlob(short), /本譜有 8 個起音，目前各節為 2 字/);
-  const long = makeScore(8); long.lyrics = '一、\n' + '甲'.repeat(20);
+  const long = makeScore(8);
+  long.lyrics = '一、\n' + '甲'.repeat(20);
   assert.throws(() => layout(long), /本譜有 8 個起音，目前各節為 20 字/);
-  const uneven = makeScore(8); uneven.lyrics = '一、\n甲乙丙丁戊己庚辛\n\n二、\n甲乙';
+  const uneven = makeScore(8);
+  uneven.lyrics = '一、\n甲乙丙丁戊己庚辛\n\n二、\n甲乙';
   assert.throws(() => layout(uneven), /8 個起音，目前各節為 8、2 字/);
 });
 
@@ -82,7 +90,8 @@ test('多節：12 節各有一個節次標記（①～⑫）且只標在第一�
   const xml = await docXml(s);
   const marks = texts(xml).filter(t => /^[\u2460-\u246b]$/.test(t));
   assert.deepEqual(marks, ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩', '⑪', '⑫']);
-  const one = makeScore(8); one.lyrics = '一、\n甲乙丙丁戊己庚辛';
+  const one = makeScore(8);
+  one.lyrics = '一、\n甲乙丙丁戊己庚辛';
   const line = x => Number(x.match(/<w:spacing w:line="(\d+)" w:lineRule="exact" w:after="100"\/><w:keepLines\/>/)[1]);
   assert.equal(line(xml) - line(await docXml(one)), 11 * 19 * 20, '每多一節 +19 pt');
 });
@@ -102,7 +111,8 @@ test('超出一頁：長譜分成多個系統，每個系統都是 keepLines＋�
     const {systems, options} = layout(s, preset);
     assert.ok(systems.length > 4, '300 個音至少分成多個系統');
     const xml = await docXml(s, preset);
-    const rowParagraphs = xml.match(/<w:spacing w:line="\d+" w:lineRule="exact" w:after="100"\/><w:keepLines\/>/g) || [];
+    const rowParagraphs =
+      xml.match(/<w:spacing w:line="\d+" w:lineRule="exact" w:after="100"\/><w:keepLines\/>/g) || [];
     assert.equal(rowParagraphs.length, systems.length, `${preset.preset}：每個系統一個 keepLines 段落`);
     const height = Number(rowParagraphs[0].match(/line="(\d+)"/)[1]) / 20;
     assert.equal(height, options.rowBase + 19);
@@ -114,11 +124,19 @@ test('超出一頁：長譜分成多個系統，每個系統都是 keepLines＋�
 
 test('和弦靠近：同一個音內的多個和弦一個都不會被丟掉，且依時間排序（目前不做防重疊位移，列為待決）', async () => {
   const s = makeScore(1);
-  s.sections.verse[0].notes = [[60, 4]]; s.sections.verse[0].beats = 4;
-  s.sections.verse[0].chordChanges = [{beat: 0, text: 'C'}, {beat: 0.25, text: 'G7'}, {beat: 0.5, text: 'Am7'}];
+  s.sections.verse[0].notes = [[60, 4]];
+  s.sections.verse[0].beats = 4;
+  s.sections.verse[0].chordChanges = [
+    {beat: 0, text: 'C'},
+    {beat: 0.25, text: 'G7'},
+    {beat: 0.5, text: 'Am7'}
+  ];
   const {systems} = layout(s);
   const chords = systems.flat().flatMap(p => p.chords);
-  assert.deepEqual(chords.map(c => c.text), ['C', 'G7', 'Am7']);
+  assert.deepEqual(
+    chords.map(c => c.text),
+    ['C', 'G7', 'Am7']
+  );
   assert.ok(chords.every((c, i) => i === 0 || c.q > chords[i - 1].q));
   const xml = await docXml(s);
   for (const name of ['C', 'G', 'Am']) assert.ok(texts(xml).includes(name), `和弦 ${name} 出現在文件中`);
