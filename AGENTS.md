@@ -28,7 +28,7 @@
 
 ## 4. 測試
 - **`npm test` 必須全過**（只用 Node 內建模組，不需安裝任何東西）；新行為要補測試，修 bug 要補「修正前會失敗」的回歸測試。
-- 主要測試：`music.test.js`、`studio.test.js`、`worker.test.js`、`word-layout.test.js`（鎖定兩種 Word 版式）、`word-edge.test.js`（高風險邊界）、`wording.test.js`（用字規則）、`golden-docx.test.js`（DOCX 位元組比對）、`score-edit.test.js`、`musicxml.test.js`（MusicXML 匯出）、`repo-hygiene.test.js`。新增測試檔記得加進 `package.json` 的 `test` 腳本。
+- 主要測試：`music.test.js`、`studio.test.js`、`worker.test.js`、`word-layout.test.js`（鎖定兩種 Word 版式）、`word-edge.test.js`（高風險邊界）、`wording.test.js`（用字規則）、`golden-docx.test.js`（DOCX 位元組比對）、`score-edit.test.js`、`musicxml.test.js`（MusicXML 匯出）、`word-lyrics-inline.test.js`（歌詞內文整句排法）、`repo-hygiene.test.js`。新增測試檔記得加進 `package.json` 的 `test` 腳本。
 - **刻意改變排版或用字規則**時，先改測試反映新規格，再 `UPDATE_GOLDEN=1 npm test` 更新 `golden-docx.json`，並在 PR 說明為何輸出改變。
 - 瀏覽器煙霧測試（可選）：`npm install && npm run test:e2e`（手機 390px／桌面 1440px，檢查無水平捲動、主要控制項可見、可匯出 Word／MIDI）。需要本機 Chrome（可用 `CHROME_PATH`）。CI 有獨立的 `e2e` job，不影響 `npm test`。
 - 改 UI 或拆檔時，除了測試，也用 Playwright 實際操作比對行為（重構 PR 的做法）。
@@ -66,8 +66,8 @@
 | 標題 | 明體 14 pt 置中 | 標楷體 22 pt 置中 |
 | 調號／拍號 | 同一行，左「D大調」右「4/4」；降調「降B大調」；預設不顯示速度 | 靠右一行「1=C　4/4　♩ = 88」 |
 | 節次 | ①②③…（緊貼第一字左側） | 一、二、三、 |
-| 歌詞 | 明體 12 pt；阿拉伯數字 Times New Roman | 標楷體 13.5 pt |
-| 系統行距 | 單節歌詞約 58 pt（34 + 節數 × 19 + 段後 5 pt），每多一節 +19 pt | 單節約 68 pt（44 + 節數 × 19 + 段後 5 pt） |
+| 歌詞 | 預設內文整句（`lyricLayout:'inline'`，依 Isaiah 2026-10-19 指示）：標楷體 14 pt、每節一行、以定位點對準音符，阿拉伯數字 Times New Roman；舊版逐字方塊（`'boxes'`）為明體 12 pt | 預設內文整句：標楷體 14 pt（英數也用標楷體）；`'boxes'` 為標楷體 13.5 pt |
+| 系統行距 | inline（預設，依 Isaiah 2026-10-19 指示）：譜行 38 pt + 每節 20 pt + 段後 5 pt，單節 63 pt、兩節 83 pt；boxes：單節約 58 pt（34 + 節數 × 19 + 段後 5 pt），每多一節 +19 pt | inline：譜行 38 pt + 每節 20 pt + 段後 15 pt，單節 73 pt、兩節 93 pt；boxes：單節約 68 pt（44 + 節數 × 19 + 段後 5 pt） |
 | 頁首／頁碼 | 無 | 無 |
 | 版權行 | 可選，末頁置中斜體 10 pt；預設不加 | 同 |
 | 官方用字替換 | 預設開 | 預設關 |
