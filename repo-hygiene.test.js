@@ -64,3 +64,15 @@ test('.gitignore 排除環境變數檔與私人字型／音檔／匯出檔', () 
     assert.ok(ignore.includes(rule), `.gitignore 缺少 ${rule}`);
   }
 });
+
+test('AGENTS.md 存在、含關鍵規則，且文中提到的檔案都真的存在（避免文件過期）', () => {
+  const text = fs.readFileSync(path.join(root, 'AGENTS.md'), 'utf8');
+  for (const must of ['不直接推 `main`', '`npm test` 必須全過', '繁體中文', '01SMN', '#9C2323', '不可提交'])
+    assert.ok(text.includes(must), `AGENTS.md 缺少「${must}」`);
+  const mentioned = [...new Set([...text.matchAll(/`([\w.-]+\.(?:js|mjs|json|md|html|css|toml))`/g)].map(m => m[1]))];
+  const EXTERNAL = new Set(['recovery-format-guide.md', 'recovery-format-cheatsheet.md']); // 儲存庫外的官方格式規範
+  const missing = mentioned.filter(f => !EXTERNAL.has(f) && !fs.existsSync(path.join(root, f)) && !files.includes(f));
+  assert.deepEqual(missing, [], 'AGENTS.md 提到不存在的檔案');
+  const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+  for (const f of pkg.scripts.test.split(/\s+/).filter(x => x.endsWith('.test.js'))) assert.ok(text.includes(f), `AGENTS.md 的測試清單缺少 ${f}`);
+});
