@@ -21,7 +21,7 @@ export const PRESETS = {
     rowBase: 34,
     copyright: '',
     wording: true,
-    lyricLayout: 'boxes'
+    lyricLayout: 'inline'
   },
   classic: {
     paper: 'a4',
@@ -40,7 +40,7 @@ export const PRESETS = {
     rowBase: 44,
     copyright: '',
     wording: false,
-    lyricLayout: 'boxes'
+    lyricLayout: 'inline'
   }
 };
 export const DEFAULT_PRESET = 'lsm';

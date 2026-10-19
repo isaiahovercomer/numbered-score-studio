@@ -284,3 +284,12 @@ test('T19 字數不符的錯誤與 boxes 相同', () => {
   assert.match(msg({lyricLayout: 'inline'}), /^歌詞需逐字對位/);
   assert.equal(msg({lyricLayout: 'inline'}), msg({lyricLayout: 'boxes'}));
 });
+
+test('T20 預設排法為 inline（依 Isaiah 2026-10-19 指示）；可用 boxes 改回逐字方塊', async () => {
+  for (const preset of ['lsm', 'classic']) {
+    assert.equal(resolveOptions({preset}).lyricLayout, 'inline');
+    const xml = await docXml(exL(), {preset});
+    assert.ok(topParas(xml).filter(isLyric).length > 0, `${preset} 預設應產生內文歌詞段落`);
+    assert.equal(xml, await docXml(exL(), {preset, lyricLayout: 'inline'}));
+  }
+});
