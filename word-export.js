@@ -106,6 +106,33 @@ function markBox(vi, x, y, o) {
     ? box(verseMark(vi, 'circled'), x - 16, y, 16, 19, o.textFont, o.lyricPt, '000000', false, o.textAscii)
     : box(verseMark(vi, 'chinese'), x - 32, y, 30, 19, o.textFont, o.lyricPt, '000000', false, o.textAscii);
 }
+// 譜行方塊：音符、小節線、和弦、連結線（boxes 與 inline 共用）。extra(p, i, x) 讓 boxes 在音符與和弦之間插入歌詞方塊，維持原輸出順序。
+function rowShapes(row, offset, extra = () => '') {
+  let shapes = '',
+    tieStart = null;
+  for (const [i, p] of row.entries()) {
+    const x = offset + p.x;
+    shapes += box(p.text, x, 12, Math.max(p.width, advance(p.text)) + 2, 25, '01SMN', 14);
+    if (p.endBar) shapes += box('\\', x + p.width, 12, 14, 25, '01SMN', 14);
+    shapes += extra(p, i, x);
+    for (const c of p.chords) {
+      const cx = x + 7 + ((c.q - p.q) / p.duration) * p.width,
+        w = Math.max(20, c.text.length * 6 + 4);
+      shapes += box(c.text, cx - w / 2, 0, w, 13, 'Times New Roman', 10, '9C2323', true);
+    }
+    if (p.tied && tieStart === null) tieStart = offset;
+    if (p.tied && !p.tieNext && tieStart !== null) {
+      shapes += tie(tieStart, 9, x + 7 - tieStart);
+      tieStart = null;
+    }
+    if (p.tieNext && !p.tied) tieStart = x + 7;
+    if (i === row.length - 1 && tieStart !== null) {
+      shapes += tie(tieStart, 9, x + p.width + 7 - tieStart);
+      tieStart = null;
+    }
+  }
+  return shapes;
+}
 // 官方用字：只影響輸出（標題、歌詞、技能參考資料音節），呼叫端的原稿 score 不會被修改；前後等長，逐字對位不變。
 export function wordingChanges(s, options) {
   return resolveOptions(options).wording ? applyWordingToScore(s).changes : [];
@@ -115,19 +142,15 @@ export function wordBlob(s0, options) {
   const s = resolveOptions(options).wording ? applyWordingToScore(s0).score : s0;
   const {systems, verses, offset, options: o} = layout(s, options);
   let body = headerXml(s, o, false);
-  let tieStart = null;
   const reference = referenceBody(s, o);
   if (reference) body = reference;
   else
     for (const [ri, row] of systems.entries()) {
       const height = o.rowBase + verses.length * 19;
-      let shapes = '';
-      for (const [i, p] of row.entries()) {
-        const x = offset + p.x;
-        shapes += box(p.text, x, 12, Math.max(p.width, advance(p.text)) + 2, 25, '01SMN', 14);
-        if (p.endBar) shapes += box('\\', x + p.width, 12, 14, 25, '01SMN', 14);
+      const lyricShapes = (p, i, x) => {
+        let out = '';
         for (const [vi, t] of p.lyrics.entries()) {
-          shapes += box(
+          out += box(
             t,
             x,
             38 + vi * 19,
@@ -139,25 +162,11 @@ export function wordBlob(s0, options) {
             false,
             o.textAscii
           );
-          if (ri === 0 && i === 0) shapes += markBox(vi, x, 38 + vi * 19, o);
+          if (ri === 0 && i === 0) out += markBox(vi, x, 38 + vi * 19, o);
         }
-        for (const c of p.chords) {
-          const cx = x + 7 + ((c.q - p.q) / p.duration) * p.width,
-            w = Math.max(20, c.text.length * 6 + 4);
-          shapes += box(c.text, cx - w / 2, 0, w, 13, 'Times New Roman', 10, '9C2323', true);
-        }
-        if (p.tied && tieStart === null) tieStart = offset;
-        if (p.tied && !p.tieNext && tieStart !== null) {
-          shapes += tie(tieStart, 9, x + 7 - tieStart);
-          tieStart = null;
-        }
-        if (p.tieNext && !p.tied) tieStart = x + 7;
-        if (i === row.length - 1 && tieStart !== null) {
-          shapes += tie(tieStart, 9, x + p.width + 7 - tieStart);
-          tieStart = null;
-        }
-      }
-      body += `<w:p><w:pPr><w:spacing w:line="${height * 20}" w:lineRule="exact" w:after="100"/><w:keepLines/></w:pPr>${shapes}</w:p>`;
+        return out;
+      };
+      body += `<w:p><w:pPr><w:spacing w:line="${height * 20}" w:lineRule="exact" w:after="100"/><w:keepLines/></w:pPr>${rowShapes(row, offset, lyricShapes)}</w:p>`;
     }
   // Review status is shown in the site; avoid a trailing paragraph forcing a blank second page.
   if (o.copyright) body = body.replace(/<\/w:p>$/, () => copyrightAnchor(o.copyright, o) + '</w:p>');
