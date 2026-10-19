@@ -4,7 +4,9 @@ import {widths} from './font-metrics.js';
 import {applyWordingToScore,wordingHints} from './wording.js';
 export {wordingHints,applyWording,applyWordingToScore,describeChanges} from './wording.js';
 const scale=[0,2,4,5,7,9,11],enc=new TextEncoder();
-const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
+// 先移除 XML 1.0 不允許的控制字元（從 PDF 或網頁貼上時常夾帶 \u000B、\u000C 等），否則 Word 會判定檔案毀損。
+const XML_INVALID=/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g;
+const esc=s=>String(s).replace(XML_INVALID,'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
 // ── 版式選項 ───────────────────────────────────────────────────────────────
 // lsm：依水流職事站官方標語歌頁（B26ANCC01zht p.2）實測；classic：本專案原有版式（A4、標楷體 22pt、一、二、三、）。
 // 兩者皆可個別覆寫 paper／verseMarks／tempo／copyright。官方量測不到的項目（01SMN 14pt、和弦字型字級顏色、音符間距）兩版共用現狀。
