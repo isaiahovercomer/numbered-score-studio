@@ -5,7 +5,17 @@
 ## [未發佈]
 
 ### 新增
-- **MusicXML 匯出**：「下載 MusicXML」輸出單一旋律聲部的 MusicXML 4.0（音高、時值、休止、延音、調號、拍號、速度、弱起、和弦、多節歌詞）；純新增模組 `musicxml.js`，零依賴，不改既有 Word／MIDI／MP3 輸出。
+- **瀏覽器煙霧測試**：Playwright（`npm run test:e2e`）在手機 390px 與桌面 1440px 檢查無水平捲動、主要控制項可見、可匯出 Word／MIDI；獨立於 `npm test`，CI 有獨立 job。（PR #5）
+- **邊界情況回歸測試**（`word-edge.test.js`）：特殊字元、空輸入、多節、超出一頁、和弦靠近等。（PR #6）
+- **DOCX 位元組比對測試**（`golden-docx.test.js`）與 `score-edit.test.js`。（PR #8）
+- `AGENTS.md`：匯總專案工作規則與官方格式標準。
+- **MusicXML 匯出**：「下載 MusicXML」輸出單一旋律聲部的 MusicXML 4.0（音高、時值、休止、延音、調號、拍號、速度、弱起、和弦、多節歌詞）；純新增模組 `musicxml.js`，零依賴，不改既有 Word／MIDI／MP3 輸出。（PR #10）
+
+### 修正
+- 標題、歌詞或版權行含控制字元（如貼上時夾帶的 U+000B）時，Word 會判定檔案毀損；現在輸出前移除這些非法 XML 字元。（PR #6）
+
+### 變更
+- 拆分 `word-export.js`、`studio.js`、`app.js` 為較小的模組並以 Prettier 排版；輸出與行為不變。（PR #8）
 
 ## [2.1.0] - 2026-10-18
 
