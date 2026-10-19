@@ -4,7 +4,7 @@ import {widths} from './font-metrics.js';
 import {applyWordingToScore, wordingHints} from './wording.js';
 import {PAPERS, resolveOptions} from './word-options.js';
 import {verseMark, keyName, token, parseVerses} from './word-notation.js';
-import {run, box, tie, zipStore, copyrightAnchor, resetShapeIds} from './word-docx.js';
+import {run, box, tie, zipStore, copyrightAnchor, resetShapeIds, lyricParagraph} from './word-docx.js';
 // 公開 API 維持不變：其他檔案仍從 word-export.js 匯入這些名稱。
 export {PAPERS, PRESETS, DEFAULT_PRESET, resolveOptions} from './word-options.js';
 export {verseMark, keyName, token, parseVerses} from './word-notation.js';
@@ -133,6 +133,25 @@ function rowShapes(row, offset, extra = () => '') {
   }
   return shapes;
 }
+// 內文整句：譜行段落（只放浮動方塊，固定行高）＋每節一個歌詞內文段落（標楷體、定位點對準音符），以 keepNext 串成一組。
+// items = [{pos, texts:[各節音節]}]；節次標記只在第一列，放在第一個有字的音左側 16（①）或 32 pt（一、）。
+function inlineRow(shapes, items, nVerses, first, scorePt, o) {
+  let xml = `<w:p><w:pPr><w:keepNext/><w:spacing w:before="0" w:after="0" w:line="${scorePt * 20}" w:lineRule="exact"/></w:pPr>${shapes}</w:p>`;
+  for (let vi = 0; vi < nVerses; vi++) {
+    const line = items.map(it => ({pos: it.pos, text: it.texts[vi]}));
+    if (first && line.length)
+      line.unshift({pos: line[0].pos - (o.verseMarks === 'circled' ? 16 : 32), text: verseMark(vi, o.verseMarks)});
+    xml += lyricParagraph(line, {
+      last: vi === nVerses - 1,
+      after: (o.rowBase - 29) * 20,
+      font: o.lyricFont,
+      size: o.lyricPt,
+      ascii: o.lyricAscii,
+      line: o.lyricLine
+    });
+  }
+  return xml;
+}
 // 官方用字：只影響輸出（標題、歌詞、技能參考資料音節），呼叫端的原稿 score 不會被修改；前後等長，逐字對位不變。
 export function wordingChanges(s, options) {
   return resolveOptions(options).wording ? applyWordingToScore(s).changes : [];
@@ -146,6 +165,11 @@ export function wordBlob(s0, options) {
   if (reference) body = reference;
   else
     for (const [ri, row] of systems.entries()) {
+      if (o.lyricLayout === 'inline' && verses.length) {
+        const items = row.filter(p => p.lyrics.length).map(p => ({pos: offset + p.x, texts: p.lyrics}));
+        body += inlineRow(rowShapes(row, offset), items, verses.length, ri === 0, 38, o);
+        continue;
+      }
       const height = o.rowBase + verses.length * 19;
       const lyricShapes = (p, i, x) => {
         let out = '';
@@ -217,7 +241,12 @@ function referenceBody(s, o) {
     const positions = metrics(r.raw),
       attacks = positions.filter(p => p.attack);
     let shapes = box(r.raw, off, 12, advance(r.raw) + 3, 28, '01SMN', 14);
+    const inline = o.lyricLayout === 'inline' && r.lyrics.length;
     for (const [vi, v] of r.lyrics.entries()) {
+      if (inline) {
+        if (v.syllables.some((_, i) => !attacks[i])) throw Error('原稿詞音位置不完整，請重新校對。');
+        continue;
+      }
       for (const [i, t] of v.syllables.entries()) {
         if (!attacks[i]) throw Error('原稿詞音位置不完整，請重新校對。');
         shapes += box(
@@ -251,6 +280,15 @@ function referenceBody(s, o) {
       }
       const w = Math.max(20, c.text.length * 6 + 4);
       shapes += box(c.text, off + x + 7 - w / 2, 0, w, 13, 'Times New Roman', 10, '9C2323', true);
+    }
+    if (inline) {
+      const n = Math.max(...r.lyrics.map(v => v.syllables.length)),
+        items = Array.from({length: n}, (_, i) => ({
+          pos: off + attacks[i].x,
+          texts: r.lyrics.map(v => v.syllables[i] ?? '')
+        }));
+      body += inlineRow(shapes, items, r.lyrics.length, ri === 0, 40, o);
+      continue;
     }
     body += `<w:p><w:pPr><w:spacing w:line="${(o.rowBase + 2 + r.lyrics.length * 19) * 20}" w:lineRule="exact" w:after="100"/><w:keepLines/></w:pPr>${shapes}</w:p>`;
   }
