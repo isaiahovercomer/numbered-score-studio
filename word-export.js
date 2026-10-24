@@ -3,11 +3,11 @@ import {writtenEvents} from './score-bridge.js';
 import {widths} from './font-metrics.js';
 import {applyWordingToScore, wordingHints} from './wording.js';
 import {PAPERS, resolveOptions} from './word-options.js';
-import {verseMark, keyName, token, parseVerses} from './word-notation.js';
+import {verseMark, keyName, token, parseVerses, chordLabel} from './word-notation.js';
 import {run, box, tie, zipStore, copyrightAnchor, resetShapeIds} from './word-docx.js';
 // 公開 API 維持不變：其他檔案仍從 word-export.js 匯入這些名稱。
 export {PAPERS, PRESETS, DEFAULT_PRESET, resolveOptions} from './word-options.js';
-export {verseMark, keyName, token, parseVerses} from './word-notation.js';
+export {verseMark, keyName, token, parseVerses, chordLabel} from './word-notation.js';
 export {wordingHints, applyWording, applyWordingToScore, describeChanges} from './wording.js';
 const advance = raw => [...raw].reduce((n, c) => n + (widths[c] ?? 1), 0) * 14;
 export function layout(s, options) {
@@ -144,7 +144,8 @@ export function wordBlob(s0, options) {
         for (const c of p.chords) {
           const cx = x + 7 + ((c.q - p.q) / p.duration) * p.width,
             w = Math.max(20, c.text.length * 6 + 4);
-          shapes += box(c.text, cx - w / 2, 0, w, 13, 'Times New Roman', 10, '9C2323', true);
+          const label = chordLabel(c.text, o.chordAccidentals);
+          shapes += box(label, cx - w / 2, 0, w, 13, 'Times New Roman', 10, '9C2323', true);
         }
         if (p.tied && tieStart === null) tieStart = offset;
         if (p.tied && !p.tieNext && tieStart !== null) {
@@ -241,7 +242,8 @@ function referenceBody(s, o) {
             ((positions[i + 1]?.x ?? positions[i].x + 14) - positions[i].x);
       }
       const w = Math.max(20, c.text.length * 6 + 4);
-      shapes += box(c.text, off + x + 7 - w / 2, 0, w, 13, 'Times New Roman', 10, '9C2323', true);
+      const label = chordLabel(c.text, o.chordAccidentals);
+      shapes += box(label, off + x + 7 - w / 2, 0, w, 13, 'Times New Roman', 10, '9C2323', true);
     }
     body += `<w:p><w:pPr><w:spacing w:line="${(o.rowBase + 2 + r.lyrics.length * 19) * 20}" w:lineRule="exact" w:after="100"/><w:keepLines/></w:pPr>${shapes}</w:p>`;
   }
