@@ -1,6 +1,7 @@
-import {KEYS,validateScore,chordVoicing} from './music.js';
+import {KEYS,validateScore,chordVoicing,SCORE_LIMITS} from './music.js';
 export function fromTranscription(d){
- if(!Array.isArray(d.notes)||!d.notes.length||d.notes.length>8000)throw Error('缺少有效的音符資料。');
+ if (!Array.isArray(d.notes) || !d.notes.length) throw Error('缺少有效的音符資料。');
+ if (d.notes.length > SCORE_LIMITS.notes) throw Error(`音符數超過 ${SCORE_LIMITS.notes} 上限，請剪短錄音後再試。`);
  const key=d.target_key||d.source_key||'C';if(!(key in KEYS))throw Error('不支援此調性。');
  const bars=[];let bar={notes:[],chord:'',tieFrom:[]},q=0,limit=d.pickup_beats?d.pickup_beats*4:16,used=0;
  for(const n of d.notes){if(n.q!==q||!Number.isInteger(n.duration)||n.duration<1||n.duration>512||!(n.midi===null||Number.isInteger(n.midi)&&n.midi>=24&&n.midi<=96))throw Error('音符時間不連續或數值無效。');let left=n.duration,continuation=false;
