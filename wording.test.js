@@ -282,3 +282,14 @@ test('回歸：已自動替換的因著、為著不再列為待確認的「著�
   const off = wordingHints('因著祂', {applied: false});
   assert.ok(off.some(h => h.includes('因着')) && off.some(h => h.includes('著')));
 });
+
+test('什嗎→甚麼：替換後不會變成「甚麼麼」；這嗎、嗎哪、甚麼嗎不變；長度不變、不再提示', () => {
+  const fix = t => applyWording(t).text;
+  assert.equal(fix('你是什嗎人'), '你是甚麼人');
+  assert.equal(fix('什嗎？'), '甚麼？');
+  for (const t of ['這嗎', '嗎哪', '甚麼嗎']) assert.equal(fix(t), t);
+  for (const t of ['你是什嗎人', '什嗎？']) assert.equal([...fix(t)].length, [...t].length);
+  assert.ok(AUTO_RULES.findIndex(r => r.id === 'shenme3') < AUTO_RULES.findIndex(r => r.id === 'ma'));
+  const out = fix('你是什嗎人');
+  assert.ok(!wordingHints(out, {applied: true}).some(h => h.includes('嗎') || h.includes('什')));
+});

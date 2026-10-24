@@ -13,6 +13,13 @@ export function verseMark(i, style = 'circled') {
   return (CN_MARKS[i] || n) + '、';
 }
 // 官方調號寫法：「D大調」；降記號寫「降B大調」（官方樣本只有 D 大調，降調寫法為依華語慣例推定）。
+// 和弦顯示：style 為 'symbol' 時只把根音與斜線低音後的 #／b 換成 ♯／♭；
+// 品質字母（maj、m、dim、sus）不動，資料本身不改。
+export function chordLabel(text, style = 'ascii') {
+  if (style !== 'symbol') return text;
+  const symbol = {'#': '\u266F', b: '\u266D'};
+  return text.replace(/(^|\/)([A-G])([#b])/g, (_, lead, root, acc) => lead + root + symbol[acc]);
+}
 export function keyName(key) {
   return (key.endsWith('b') ? '降' : '') + key[0] + '大調';
 }
