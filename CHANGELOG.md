@@ -2,21 +2,25 @@
 
 格式依 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.1.0/)，版本號依 [語意化版本](https://semver.org/lang/zh-TW/)。
 
-## [未發佈]
+## [2.2.0] - 2026-10-24
 
 ### 新增
 - **瀏覽器煙霧測試**：Playwright（`npm run test:e2e`）在手機 390px 與桌面 1440px 檢查無水平捲動、主要控制項可見、可匯出 Word／MIDI；獨立於 `npm test`，CI 有獨立 job。（PR #5）
 - **邊界情況回歸測試**（`word-edge.test.js`）：特殊字元、空輸入、多節、超出一頁、和弦靠近等。（PR #6）
 - **DOCX 位元組比對測試**（`golden-docx.test.js`）與 `score-edit.test.js`。（PR #8）
-- `AGENTS.md`：匯總專案工作規則與官方格式標準。
+- `AGENTS.md`：匯總專案工作規則與官方格式標準。（PR #9）
 - **MusicXML 匯出**：「下載 MusicXML」輸出單一旋律聲部的 MusicXML 4.0（音高、時值、休止、延音、調號、拍號、速度、弱起、和弦、多節歌詞）；純新增模組 `musicxml.js`，零依賴，不改既有 Word／MIDI／MP3 輸出。（PR #10）
-- **一字一音診斷**：歌詞字數與起音數不符時，即時指出第幾節、哪個段落第幾小節第幾拍、差幾字與哪一行不同；Word／MusicXML 匯出失敗時附上診斷。只提示不修改；純新增模組 `lyrics-diagnose.js`，不改既有輸出。
+- **一字一音診斷**：歌詞字數與起音數不符時，即時指出第幾節、哪個段落第幾小節第幾拍、差幾字與哪一行不同；Word／MusicXML 匯出失敗時附上診斷。只提示不修改；純新增模組 `lyrics-diagnose.js`，不改既有輸出。（PR #13）
+- **lsm 版式和弦升降記號**：Word 輸出的和弦 `#`／`b` 顯示為上標 ♯／♭（如 F♯m、B♭、C♯m7/G♯）；只改顯示，樂譜資料、MIDI、MusicXML 不變；classic 輸出不變。（PR #12）
+- **用字規則「什嗎→甚麼」**：替換後不會變成「甚麼麼」；「這嗎」「嗎哪」「甚麼嗎」等不受影響。（PR #12）
+- `line-length.test.js`：行寬 120 檢查，舊檔的超長行數只准減少。（PR #11）
 
 ### 修正
 - 標題、歌詞或版權行含控制字元（如貼上時夾帶的 U+000B）時，Word 會判定檔案毀損；現在輸出前移除這些非法 XML 字元。（PR #6）
 
 ### 變更
 - 拆分 `word-export.js`、`studio.js`、`app.js` 為較小的模組並以 Prettier 排版；輸出與行為不變。（PR #8）
+- `musicxml.js` 依 Prettier 規則整理行寬；純格式重構，輸出不變。（PR #11）
 
 ## [2.1.0] - 2026-10-18
 
@@ -40,4 +44,5 @@
 - 衛生測試改用 `fileURLToPath`（Windows 相容）並以 git 檔案清單略過被 `.gitignore` 排除的本機檔案。（PR #2）
 - 深色面板中的「Word 版式」選單文字可見；版權文字含 `$` 時不再破壞 DOCX。（PR #3）
 
+[2.2.0]: https://github.com/isaiahovercomer/numbered-score-studio/releases/tag/v2.2.0
 [2.1.0]: https://github.com/isaiahovercomer/numbered-score-studio/releases/tag/v2.1.0
