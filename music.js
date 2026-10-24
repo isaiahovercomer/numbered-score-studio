@@ -1,3 +1,4 @@
+export const SCORE_LIMITS = {seconds: 780, bars: 1024, notes: 12000, sectionBars: 1024};
 export const KEYS={C:0,Db:1,D:2,Eb:3,E:4,F:5,Gb:6,G:7,Ab:8,A:9,Bb:10,B:11};
 const SCALE=[0,2,4,5,7,9,11];
 export function parseNotes(text,key='C'){
@@ -32,7 +33,12 @@ export function validateScore(s){
  if(s.extra_events?.length)throw Error('此樂譜含自訂額外聲部，請先用原技能輸出；網頁版尚不支援此格式。');
  if(s.warnings!==undefined&&(!Array.isArray(s.warnings)||!s.warnings.every(w=>typeof w==='string')))throw Error('辨識備註格式不正確。');
  if(Object.keys(s.sections).length>12||s.form.length>64)throw Error('段落數量過多。');
- for(const section of Object.values(s.sections))if(!Array.isArray(section)||!section.length||section.length>128||section.some(b=>!Array.isArray(b.notes)||b.notes.some(n=>!Array.isArray(n)||n.length!==2)))throw Error('樂譜段落格式不正確。');
+ for (const section of Object.values(s.sections)) {
+  if (!Array.isArray(section) || !section.length || section.length > SCORE_LIMITS.sectionBars ||
+      section.some(b => !Array.isArray(b.notes) || b.notes.some(n => !Array.isArray(n) || n.length !== 2))) {
+   throw Error('樂譜段落格式不正確。');
+  }
+ }
  if(!(s.key in KEYS))throw Error('目前支援 C 到 B 的大調，請先轉為大調音階表示。');
  if(!Number.isFinite(s.bpm)||s.bpm<40||s.bpm>200)throw Error('速度請設定為 40–200 BPM。');
  if(!Array.isArray(s.meter)||s.meter.length!==2||!Number.isInteger(s.meter[0])||s.meter[0]<1||s.meter[0]>12||![4,8].includes(s.meter[1]))throw Error('拍號格式不正確。');
@@ -45,7 +51,9 @@ export function validateScore(s){
    beats+=sum;bars++;
   });
  }
- if(bars>512||notes>8000||beats*60/s.bpm>600)throw Error('單次輸出上限為 10 分鐘、512 小節。請減少遍數。');
+ if (bars > SCORE_LIMITS.bars || notes > SCORE_LIMITS.notes || beats * 60 / s.bpm > SCORE_LIMITS.seconds) {
+  throw Error(`單次輸出上限為 ${SCORE_LIMITS.seconds / 60} 分鐘、${SCORE_LIMITS.bars} 小節。請減少遍數。`);
+ }
  return {beats,bars,notes,seconds:beats*60/s.bpm+2};
 }
 export function arrange(s,mode='ensemble',mix={},preview=false){
