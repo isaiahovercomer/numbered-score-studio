@@ -70,11 +70,13 @@ test('U9：單段允許 1024 小節但拒絕 1025 小節', () => {
   assert.equal(music.validateScore(score(1024, [2, 4])).bars, 1024);
   assert.throws(() => music.validateScore(score(1025, [2, 4])), /樂譜段落格式不正確/);
 });
-test('U10：12000 筆通過筆數檢查但超過總長，12001 筆直接拒絕', () => {
+test('U10：12000 筆通過筆數檢查但超過總長，12001 筆回報音符數上限', () => {
   // 12000 筆最短十六分音符在 200 BPM 需要 900 秒，包含休止符亦同。
   // 暫以可明確區分的錯誤驗證筆數檢查接受邊界，並拒絕下一筆。
   assert.throws(() => fromTranscription(transcription(12000, 1, null)), /單次輸出上限/);
-  assert.throws(() => fromTranscription(transcription(12001, 1, null)), /缺少有效的音符資料/);
+  assert.throws(() => fromTranscription(transcription(12001, 1, null)), {
+    message: '音符數超過 12000 上限，請剪短錄音後再試。'
+  });
 });
 test('U11：兩秒靜音仍明確報錯（Worker 另由既有測試覆蓋）', () => {
   assert.throws(() => audio.analyzeMelody(new Float32Array(16000), 8000), /穩定單音/);

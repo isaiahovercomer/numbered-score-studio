@@ -45,6 +45,7 @@ function recordingError(error) {
   if (/單次輸出上限|樂譜段落格式不正確/.test(error.message)) {
     return `辨識出的樂譜超過 ${SCORE_LIMITS.seconds / 60} 分鐘或 ${SCORE_LIMITS.bars} 小節，請剪短錄音後再試。`;
   }
+  if (/音符數超過/.test(error.message)) return `音符數超過 ${SCORE_LIMITS.notes} 上限，請剪短錄音後再試。`;
   return error.message;
 }
 
