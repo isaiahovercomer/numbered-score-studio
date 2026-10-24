@@ -5,3 +5,5 @@
 .word-options{border-top:1px solid var(--line);padding:10px 0;margin-bottom:10px}.word-options summary{cursor:pointer;font-size:14px;color:var(--navy)}.word-options label{margin-top:10px}.word-options select,.word-options input:not([type=checkbox]){width:100%}.word-options .check{display:flex;gap:8px;align-items:center}
 /* 深色面板上的 Word 版式選單：避免文字與背景同色 */
 .mix-panel .word-options{border-top-color:#466050}.mix-panel .word-options summary,.mix-panel .word-options label{color:#e5efdf}
+
+.lyric-diag{color:#a33b2c}.lyric-diag:empty{display:none}
