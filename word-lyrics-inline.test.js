@@ -100,7 +100,10 @@ test('T3 boxes 與 main 逐位元相同（classic 只差歌詞英數字型改 Ti
   const xml = await docXml(exL(), {preset: 'classic', lyricLayout: 'boxes'});
   const tnr = 'w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:eastAsia="標楷體"';
   assert.equal((xml.match(new RegExp(tnr, 'g')) || []).length, 152);
-  assert.equal(sha(xml.replaceAll(tnr, 'w:ascii="標楷體" w:hAnsi="標楷體" w:eastAsia="標楷體"')), HASH['classic:lyrics2:xml']);
+  assert.equal(
+    sha(xml.replaceAll(tnr, 'w:ascii="標楷體" w:hAnsi="標楷體" w:eastAsia="標楷體"')),
+    HASH['classic:lyrics2:xml']
+  );
 });
 
 test('T4 純譜（無歌詞）在 inline 下逐位元不變', async () => {
@@ -316,4 +319,91 @@ test('T20 預設排法為 inline（依 Isaiah 2026-10-19 指示）；可用 boxe
     assert.ok(topParas(xml).filter(isLyric).length > 0, `${preset} 預設應產生內文歌詞段落`);
     assert.equal(xml, await docXml(exL(), {preset, lyricLayout: 'inline'}));
   }
+});
+
+// 回歸（Isaiah：節次標記永遠不可消失）：整個第一列都是休止符（前奏很長）時，標記放在全曲第一個有字的音左側；
+// 原稿版面（notationLayout）第一列沒有歌詞時，放在該節第一個有字的列。inline 與 boxes 行為相同。
+const longRest = () => ({
+  ...edge(),
+  key: 'C',
+  sections: {
+    verse: [...Array(8)]
+      .map(() => ({notes: [[null, 4]]}))
+      .concat([
+        {
+          notes: [
+            [60, 1],
+            [62, 1],
+            [64, 1],
+            [65, 1]
+          ]
+        }
+      ])
+  },
+  lyrics: '一、\n甲乙丙丁\n\n二、\n己庚辛壬'
+});
+const refLongRest = () => {
+  const s = {
+    ...longRest(),
+    sections: {
+      verse: [
+        {
+          notes: [
+            [60, 2],
+            [62, 2]
+          ]
+        },
+        {
+          notes: [
+            [64, 2],
+            [65, 2]
+          ]
+        }
+      ]
+    }
+  };
+  s.notationLayout = {
+    fingerprint: JSON.stringify([s.sections, s.key, s.lyrics]),
+    systems: [
+      {raw: '1/2/', note_q: [0, 8], lyrics: []},
+      {raw: '1/2/3/4/', note_q: [16, 20, 24, 28], lyrics: [{syllables: [...'甲乙丙丁']}, {syllables: [...'己庚辛壬']}]}
+    ]
+  };
+  return s;
+};
+const shapesAt = xml =>
+  [...xml.matchAll(/<wp:positionH[^>]*><wp:posOffset>(-?\d+)<\/wp:posOffset>.*?<\/wp:anchor>/gs)].map(m => ({
+    x: Number(m[1]),
+    text: textsOf(m[0]).join('')
+  }));
+test('T21 第一列全無歌詞：節次標記放在全曲第一個有字的音左側（inline 與 boxes、含原稿版面）', async () => {
+  for (const preset of ['lsm', 'classic'])
+    assert.equal(
+      layout(longRest(), {preset}).systems[0].some(p => p.lyrics.length),
+      false
+    );
+  for (const [name, score] of [
+    ['一般', longRest],
+    ['原稿版面', refLongRest]
+  ])
+    for (const preset of ['lsm', 'classic'])
+      for (const [verseMarks, marks, gap] of [
+        ['circled', ['①', '②'], 16],
+        ['chinese', ['一、', '二、'], 32]
+      ]) {
+        const at = `${name}/${preset}/${verseMarks}`;
+        const opts = {preset, verseMarks};
+        const paras = topParas(await docXml(score(), {...opts, lyricLayout: 'inline'})).filter(isLyric);
+        const all = shapesAt(await docXml(score(), {...opts, lyricLayout: 'boxes'}));
+        for (const [vi, first] of ['甲', '己'].entries()) {
+          const withMark = paras.filter(p => textsOf(p).includes(marks[vi]));
+          assert.equal(withMark.length, 1, `${at}/inline：節次「${marks[vi]}」應出現一次`);
+          assert.deepEqual(textsOf(withMark[0]).slice(0, 2), [marks[vi], first], `${at}/inline：標記緊接第一個字`);
+          const tabs = tabsOf(withMark[0]);
+          assert.equal(tabs[1] - tabs[0], gap * 20, `${at}/inline：節次位置`);
+          const mark = all.filter(s => s.text === marks[vi]);
+          assert.equal(mark.length, 1, `${at}/boxes：節次「${marks[vi]}」應出現一次`);
+          assert.equal(mark[0].x, all.find(s => s.text === first).x - gap * 12700, `${at}/boxes：節次位置`);
+        }
+      }
 });

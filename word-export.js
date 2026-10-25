@@ -135,13 +135,13 @@ function rowShapes(row, offset, o, extra = () => '') {
   return shapes;
 }
 // 內文整句：譜行段落（只放浮動方塊，固定行高）＋每節一個歌詞內文段落（標楷體、定位點對準音符），以 keepNext 串成一組。
-// items = [{pos, texts:[各節音節]}]；節次標記只在第一列，放在第一個有字的音左側 16（①）或 32 pt（一、）。
-function inlineRow(shapes, items, nVerses, first, scorePt, o) {
+// items = [{pos, texts:[各節音節]}]；mark(vi) 為真的節在第一個有字的音左側放節次標記 16（①）或 32 pt（一、）。
+function inlineRow(shapes, items, nVerses, mark, scorePt, o) {
   const sp = `<w:spacing w:before="0" w:after="0" w:line="${scorePt * 20}" w:lineRule="exact"/>`;
   let xml = `<w:p><w:pPr><w:keepNext/>${sp}</w:pPr>${shapes}</w:p>`;
   for (let vi = 0; vi < nVerses; vi++) {
     const line = items.map(it => ({pos: it.pos, text: it.texts[vi]}));
-    if (first && line.length)
+    if (mark(vi) && line.length)
       line.unshift({pos: line[0].pos - (o.verseMarks === 'circled' ? 16 : 32), text: verseMark(vi, o.verseMarks)});
     xml += lyricParagraph(line, {
       last: vi === nVerses - 1,
@@ -164,15 +164,19 @@ export function wordBlob(s0, options) {
   const {systems, verses, offset, options: o} = layout(s, options);
   let body = headerXml(s, o, false);
   const reference = referenceBody(s, o);
+  // 節次標記放在全曲第一個有字的列（通常是第一列；前奏整列休止時往後移），永遠不會消失。
+  const markRow = systems.findIndex(row => row.some(p => p.lyrics.length));
   if (reference) body = reference;
   else
     for (const [ri, row] of systems.entries()) {
       if (o.lyricLayout === 'inline' && verses.length) {
         const items = row.filter(p => p.lyrics.length).map(p => ({pos: offset + p.x, texts: p.lyrics}));
-        body += inlineRow(rowShapes(row, offset, o), items, verses.length, ri === 0, 38, o);
+        body += inlineRow(rowShapes(row, offset, o), items, verses.length, () => ri === markRow, 38, o);
         continue;
       }
       const height = o.rowBase + verses.length * 19;
+      // 節次標記放在第一個有字的音旁邊（曲子以休止符開頭時不會消失；與內文整句一致）。
+      const markAt = ri === markRow ? row.findIndex(p => p.lyrics.length) : -1;
       const lyricShapes = (p, i, x) => {
         let out = '';
         for (const [vi, t] of p.lyrics.entries()) {
@@ -188,7 +192,7 @@ export function wordBlob(s0, options) {
             false,
             o.lyricAscii
           );
-          if (ri === 0 && i === 0) out += markBox(vi, x, 38 + vi * 19, o);
+          if (i === markAt) out += markBox(vi, x, 38 + vi * 19, o);
         }
         return out;
       };
@@ -240,6 +244,8 @@ function referenceBody(s, o) {
     off = (o.usable - maxWidth - 32) / 2 + 32;
   let body = headerXml(s, o, true);
   const {changes} = writtenEvents(s);
+  // 每節的節次標記放在該節第一個有字的列；該節完全沒有歌詞才省略。
+  const markRow = vi => systems.findIndex(r => r.lyrics[vi]?.syllables.length);
   for (const [ri, r] of systems.entries()) {
     const positions = metrics(r.raw),
       attacks = positions.filter(p => p.attack);
@@ -265,7 +271,7 @@ function referenceBody(s, o) {
           o.lyricAscii
         );
       }
-      if (ri === 0) shapes += markBox(vi, off, 40 + vi * 19, o);
+      if (ri === markRow(vi)) shapes += markBox(vi, off, 40 + vi * 19, o);
     }
     const end = systems[ri + 1]?.note_q[0] ?? Infinity;
     for (const c of changes.filter(c => c.q >= r.note_q[0] && c.q < end)) {
@@ -291,7 +297,7 @@ function referenceBody(s, o) {
           pos: off + attacks[i].x,
           texts: r.lyrics.map(v => v.syllables[i] ?? '')
         }));
-      body += inlineRow(shapes, items, r.lyrics.length, ri === 0, 40, o);
+      body += inlineRow(shapes, items, r.lyrics.length, vi => ri === markRow(vi), 40, o);
       continue;
     }
     body += `<w:p><w:pPr><w:spacing w:line="${(o.rowBase + 2 + r.lyrics.length * 19) * 20}" w:lineRule="exact" w:after="100"/><w:keepLines/></w:pPr>${shapes}</w:p>`;
