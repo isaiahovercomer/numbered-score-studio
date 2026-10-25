@@ -60,12 +60,13 @@ export function resolveOptions(o = {}) {
     .slice(0, 120);
   if (!['boxes', 'inline'].includes(r.lyricLayout)) throw Error('歌詞排法只支援逐字方塊或內文整句。');
   if (r.lyricLayout === 'inline') {
-    // 內文整句：歌詞一律標楷體 14 pt；lsm 的英數仍用 Times New Roman（AGENTS.md §7），classic 用標楷體。標題、調號列不變。
+    // 內文整句：歌詞一律標楷體 14 pt。標題、調號列不變。
     r.lyricFont = '標楷體';
     r.lyricPt = 14;
-    r.lyricAscii = r.keyStyle === 'lsm' ? 'Times New Roman' : '標楷體';
     r.lyricLine = 20;
   }
+  // 歌詞的英文與數字一律 Times New Roman（兩種版式、兩種排法皆同；Isaiah 決定）；中文字型不變。
+  r.lyricAscii = 'Times New Roman';
   r.tempo = Boolean(r.tempo);
   r.wording = Boolean(r.wording);
   r.preset = PRESETS[o.preset] ? o.preset : DEFAULT_PRESET;

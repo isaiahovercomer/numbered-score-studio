@@ -1,4 +1,4 @@
-// 鎖定 Word 排版規格。前半（classic）鎖定使用者原有偏好（見 NOTATION_RULES.md），逐位元與改版前相同；
+// 鎖定 Word 排版規格。前半（classic）鎖定使用者原有偏好（見 NOTATION_RULES.md）；歌詞英數改 Times New Roman 為刻意變更；
 // 後半（lsm）鎖定水流職事站官方標語歌頁規格（recovery-format-guide.md A.10、B26ANCC01zht p.2 實測）。
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -36,9 +36,9 @@ async function docBytes(s, opts) {
 function runs(xml) {
   return [
     ...xml.matchAll(
-      /<w:r><w:rPr><w:rFonts w:ascii="([^"]*)"[^>]*\/><w:color w:val="([0-9A-F]{6})"\/><w:sz w:val="(\d+)"\/>(<w:vertAlign w:val="subscript"\/>)?<\/w:rPr><w:t xml:space="preserve">([^<]*)<\/w:t><\/w:r>/g
+      /<w:r><w:rPr><w:rFonts w:ascii="([^"]*)"[^>]*?w:eastAsia="([^"]*)"\/><w:color w:val="([0-9A-F]{6})"\/><w:sz w:val="(\d+)"\/>(<w:vertAlign w:val="subscript"\/>)?<\/w:rPr><w:t xml:space="preserve">([^<]*)<\/w:t><\/w:r>/g
     )
-  ].map(m => ({font: m[1], color: m[2], pt: Number(m[3]) / 2, sub: Boolean(m[4]), text: m[5]}));
+  ].map(m => ({font: m[1], ea: m[2], color: m[3], pt: Number(m[4]) / 2, sub: Boolean(m[5]), text: m[6]}));
 }
 
 test('[classic] DOCX 是完整可開啟的 OOXML 封包（CRC 正確、必要部件齊全）', async () => {
@@ -67,13 +67,14 @@ test('[classic] 標題標楷體 22pt 置中；簡譜 01SMN 14pt；歌詞標楷�
   assert.ok(score.every(r => r.pt === 14 && r.color === '000000'));
   for (const ch of ['甲', '乙', '丙', '丁']) {
     const r = all.find(x => x.text === ch);
-    assert.deepEqual([r.font, r.pt], ['標楷體', 13.5], `歌詞「${ch}」字型或字級不符`);
+    // 中文字型標楷體；英數字型 Times New Roman（2026-10-25 Isaiah 決定：歌詞英數兩種版式都用 Times New Roman）。
+    assert.deepEqual([r.ea, r.font, r.pt], ['標楷體', 'Times New Roman', 13.5], `歌詞「${ch}」字型或字級不符`);
   }
 });
 
 test('[classic] 和弦為 Times New Roman 深紅 #9C2323，只有和弦數字使用原生下標', async () => {
   const all = runs(readZip(await docBytes(makeScore(), CLASSIC))['word/document.xml']);
-  const chord = all.filter(r => r.font === 'Times New Roman');
+  const chord = all.filter(r => r.ea === 'Times New Roman');
   assert.deepEqual(
     chord.map(r => [r.text, r.sub]),
     [
@@ -87,12 +88,12 @@ test('[classic] 和弦為 Times New Roman 深紅 #9C2323，只有和弦數字使
   // 簡譜音符的數字絕不可下標。
   assert.ok(all.filter(r => r.font === '01SMN').every(r => !r.sub));
   // 和弦以外的文字顏色不可被染成深紅。
-  assert.ok(all.filter(r => r.font !== 'Times New Roman').every(r => r.color === '000000'));
+  assert.ok(all.filter(r => r.ea !== 'Times New Roman').every(r => r.color === '000000'));
 });
 
 test('[classic] 節次「一、二、」只在各節第一個字前出現一次，且歌詞逐字保留', async () => {
   const all = runs(readZip(await docBytes(makeScore(), {...CLASSIC, ...BOXES}))['word/document.xml']);
-  const lyricText = all.filter(r => r.font === '標楷體' && r.pt === 13.5).map(r => r.text);
+  const lyricText = all.filter(r => r.ea === '標楷體' && r.pt === 13.5).map(r => r.text);
   assert.equal(lyricText.filter(t => t === '一、').length, 1);
   assert.equal(lyricText.filter(t => t === '二、').length, 1);
   assert.deepEqual(lyricText.filter(t => /\p{Script=Han}/u.test(t) && !t.endsWith('、')).sort(), [

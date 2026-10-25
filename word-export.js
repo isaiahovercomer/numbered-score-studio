@@ -186,7 +186,7 @@ export function wordBlob(s0, options) {
             o.lyricPt,
             '000000',
             false,
-            o.textAscii
+            o.lyricAscii
           );
           if (ri === 0 && i === 0) out += markBox(vi, x, 38 + vi * 19, o);
         }
@@ -262,7 +262,7 @@ function referenceBody(s, o) {
           o.lyricPt,
           '000000',
           false,
-          o.textAscii
+          o.lyricAscii
         );
       }
       if (ri === 0) shapes += markBox(vi, off, 40 + vi * 19, o);

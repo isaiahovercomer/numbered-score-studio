@@ -71,7 +71,9 @@ const HASH = {
   'lsm:lyrics2': '076101ca2abac8ee4b8eddaed251139a5abd57367b46c8d67f7d524798523af8',
   'classic:lyrics2': '3b8c59c2687362e3adba1d68ebeff17a8cc7006607b543e27407d8b290910871',
   'lsm:plain': 'fdb47ce68ac3b0b47bd87b6a7c698cff5442ccf96bddfc5c824ae39b3a46a341',
-  'classic:plain': 'bea1d5a58fb94f66508655691118ac54a6f169616d9299685be3101e35ac1c14'
+  'classic:plain': 'bea1d5a58fb94f66508655691118ac54a6f169616d9299685be3101e35ac1c14',
+  // main 的 classic boxes document.xml（歌詞英數仍為標楷體時）。
+  'classic:lyrics2:xml': 'f335d8cb6e04486985b4f522f0aa0f62c563ec0b07c08d51b2b5f1dd458687b6'
 };
 
 test('T1 選項：inline 時歌詞改標楷體 14 pt，標題字型不變', () => {
@@ -82,8 +84,9 @@ test('T1 選項：inline 時歌詞改標楷體 14 pt，標題字型不變', () =
     assert.equal(r.lyricPt, 14);
     assert.equal(r.lyricLine, 20);
   }
-  assert.equal(l.lyricAscii, 'Times New Roman');
-  assert.equal(c.lyricAscii, '標楷體');
+  // 歌詞英數一律 Times New Roman（兩種版式、兩種排法；2026-10-25 Isaiah 決定）。
+  const boxes = [resolveOptions({lyricLayout: 'boxes'}), resolveOptions({preset: 'classic', lyricLayout: 'boxes'})];
+  for (const r of [l, c, ...boxes]) assert.equal(r.lyricAscii, 'Times New Roman');
   assert.equal(l.textFont, '新細明體');
   assert.equal(c.textFont, '標楷體');
 });
@@ -92,9 +95,12 @@ test('T2 不合法的歌詞排法', () => {
   assert.throws(() => resolveOptions({lyricLayout: 'x'}), {message: '歌詞排法只支援逐字方塊或內文整句。'});
 });
 
-test('T3 boxes 與 main 逐位元相同', async () => {
+test('T3 boxes 與 main 逐位元相同（classic 只差歌詞英數字型改 Times New Roman）', async () => {
   assert.equal(sha(await bytes(exL(), {lyricLayout: 'boxes'})), HASH['lsm:lyrics2']);
-  assert.equal(sha(await bytes(exL(), {preset: 'classic', lyricLayout: 'boxes'})), HASH['classic:lyrics2']);
+  const xml = await docXml(exL(), {preset: 'classic', lyricLayout: 'boxes'});
+  const tnr = 'w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:eastAsia="標楷體"';
+  assert.equal((xml.match(new RegExp(tnr, 'g')) || []).length, 152);
+  assert.equal(sha(xml.replaceAll(tnr, 'w:ascii="標楷體" w:hAnsi="標楷體" w:eastAsia="標楷體"')), HASH['classic:lyrics2:xml']);
 });
 
 test('T4 純譜（無歌詞）在 inline 下逐位元不變', async () => {
@@ -143,10 +149,10 @@ test('T8 歌詞段落 pPr 子元素依 OOXML 順序', async () => {
   }
 });
 
-test('T9 歌詞字型：標楷體 14 pt；英數 lsm 為 Times New Roman、classic 為標楷體', async () => {
+test('T9 歌詞字型：標楷體 14 pt；英數兩種版式都是 Times New Roman', async () => {
   for (const [o, ascii] of [
     [{lyricLayout: 'inline'}, 'Times New Roman'],
-    [{preset: 'classic', lyricLayout: 'inline'}, '標楷體']
+    [{preset: 'classic', lyricLayout: 'inline'}, 'Times New Roman']
   ]) {
     const lp = topParas(await docXml(exL(), o)).filter(isLyric);
     for (const p of lp)
@@ -155,6 +161,24 @@ test('T9 歌詞字型：標楷體 14 pt；英數 lsm 為 Times New Roman、class
         assert.match(m[1], /w:eastAsia="標楷體"/);
         assert.equal(m[2], '28');
       }
+  }
+});
+
+test('T9b 逐字方塊的歌詞英數也是 Times New Roman，中文字型不變（lsm 新細明體、classic 標楷體）', async () => {
+  for (const [preset, ea] of [
+    ['lsm', '新細明體'],
+    ['classic', '標楷體']
+  ]) {
+    const s = {...edge(), lyrics: '甲a1b'};
+    const xml = await docXml(s, {preset, lyricLayout: 'boxes', verseMarks: 'circled'});
+    for (const t of ['甲', 'a', '1', 'b']) {
+      // 取最後一個符合的 run（調號列可能也有「1」，歌詞在其後）。
+      const re = new RegExp(`<w:rFonts ([^>]*)/>(?:(?!</w:r>).)*<w:t xml:space="preserve">${t}</w:t>`, 'g');
+      const m = [...xml.matchAll(re)].at(-1);
+      assert.ok(m, `${preset} 找不到歌詞「${t}」`);
+      assert.match(m[1], /w:ascii="Times New Roman" w:hAnsi="Times New Roman"/, `${preset}「${t}」`);
+      assert.match(m[1], new RegExp(`w:eastAsia="${ea}"`), `${preset}「${t}」`);
+    }
   }
 });
 
