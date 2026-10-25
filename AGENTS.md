@@ -28,7 +28,7 @@
 
 ## 4. 測試
 - **`npm test` 必須全過**（只用 Node 內建模組，不需安裝任何東西）；新行為要補測試，修 bug 要補「修正前會失敗」的回歸測試。
-- 主要測試：`music.test.js`、`studio.test.js`、`worker.test.js`、`word-layout.test.js`（鎖定兩種 Word 版式）、`word-edge.test.js`（高風險邊界）、`wording.test.js`（用字規則）、`golden-docx.test.js`（DOCX 位元組比對）、`score-edit.test.js`、`musicxml.test.js`（MusicXML 匯出）、`lyrics-diagnose.test.js`（一字一音診斷）、`word-lyrics-inline.test.js`（歌詞內文整句排法）、`repo-hygiene.test.js`、`line-length.test.js`（行寬 120；舊檔的超長行數只准減少）。新增測試檔記得加進 `package.json` 的 `test` 腳本。
+- 主要測試：`music.test.js`、`studio.test.js`、`worker.test.js`、`word-layout.test.js`（鎖定兩種 Word 版式）、`word-edge.test.js`（高風險邊界）、`word-chords.test.js`（和弦錯開與行尾回推）、`wording.test.js`（用字規則）、`golden-docx.test.js`（DOCX 位元組比對）、`score-edit.test.js`、`musicxml.test.js`（MusicXML 匯出）、`lyrics-diagnose.test.js`（一字一音診斷）、`word-lyrics-inline.test.js`（歌詞內文整句排法）、`repo-hygiene.test.js`、`line-length.test.js`（行寬 120；舊檔的超長行數只准減少）。新增測試檔記得加進 `package.json` 的 `test` 腳本。
 - **刻意改變排版或用字規則**時，先改測試反映新規格，再 `UPDATE_GOLDEN=1 npm test` 更新 `golden-docx.json`，並在 PR 說明為何輸出改變。
 - 瀏覽器煙霧測試（可選）：`npm install && npm run test:e2e`（手機 390px／桌面 1440px，檢查無水平捲動、主要控制項可見、可匯出 Word／MIDI）。需要本機 Chrome（可用 `CHROME_PATH`）。CI 有獨立的 `e2e` job，不影響 `npm test`。
 - 改 UI 或拆檔時，除了測試，也用 Playwright 實際操作比對行為（重構 PR 的做法）。
@@ -54,6 +54,8 @@
 - **全部繁體中文、手機友善**：390px 寬不得水平捲動，觸控目標至少 40px 高；介面要能在手機操作。
 - 簡譜字型 **01SMN 是私人字型**，Word 裝置自行安裝；網頁以一般文字預覽，不內嵌字型。
 - 和弦：Times New Roman、深紅 `#9C2323`，數字用 **Word 原生下標**；音符數字不可下標。
+- 和弦過近時每行由左邊優先定位，右邊連鎖錯開，依顯示字的可見寬度保持至少 2 pt；行尾回推。
+  不換行、不縮字、不刪和弦；整行總寬超出版心時保留正向結果，匯出面板顯示「和弦過密：第 N 行」。
 - 簡譜 01SMN 14 pt；整組詞譜置中、各行共同左緣；優先一頁，放不下正常分頁，**不縮小、不刪內容**；每個詞譜行 `keepLines`。
 - 歌詞逐字對位：各節字數＝起音數，不符就**明確報錯**，不補刪、不錯配；所有文字與標點保留。
 - 建議和弦、音訊和弦估計、使用者確認和弦要分開標示；單音配和弦不可說成「錄音伴奏辨識」。
@@ -68,6 +70,7 @@
 | 節次 | ①②③…（緊貼第一字左側） | 一、二、三、 |
 | 歌詞 | 預設內文整句（`lyricLayout:'inline'`，依 Isaiah 2026-10-19 指示）：標楷體 14 pt、每節一行、以定位點對準音符，英文與數字 Times New Roman（兩種排法皆同）；舊版逐字方塊（`'boxes'`）為明體 12 pt | 預設內文整句：標楷體 14 pt；`'boxes'` 為標楷體 13.5 pt；兩種排法的英文與數字都用 Times New Roman（Isaiah 2026-10-25 決定） |
 | 系統行距 | inline（預設，依 Isaiah 2026-10-19 指示）：譜行 38 pt + 每節 20 pt + 段後 5 pt，單節 63 pt、兩節 83 pt；boxes：單節約 58 pt（34 + 節數 × 19 + 段後 5 pt），每多一節 +19 pt | inline：譜行 38 pt + 每節 20 pt + 段後 15 pt，單節 73 pt、兩節 93 pt；boxes：單節約 68 pt（44 + 節數 × 19 + 段後 5 pt） |
+| 和弦間距 | 可見間距至少 2 pt，左邊優先、右邊錯開；行尾回推 | 同 |
 | 頁首／頁碼 | 無 | 無 |
 | 版權行 | 可選，末頁置中斜體 10 pt；預設不加 | 同 |
 | 官方用字替換 | 預設開 | 預設關 |
