@@ -31,7 +31,7 @@
 | 歌詞 | 預設內文整句：標楷體 14 pt、英數 Times New Roman；`lyricLayout:'boxes'` 為明體 12 pt 逐字方塊（英數同為 Times New Roman） | 預設內文整句：標楷體 14 pt；boxes 為標楷體 13.5 pt；英數兩種排法都是 Times New Roman | 官方內文明體 11.86 pt（名義 12）；內文整句依 Isaiah 2026-10-19 指示 |
 | 系統（行）間距 | inline 單節 63 pt、兩節 83 pt；boxes 單節 58 pt（官方 56.6～58） | inline 73／93 pt；boxes 68 pt | inline 每多一節 +20 pt；boxes 量測，每多一節 +19 pt |
 | 頁首／頁碼 | 無 | 無 | 官方無，本專案本來就無 |
-| 版權行 | 可選，置中斜體 10 pt，距頁底約 25.5 pt，只在最後一頁；預設不加 | 同 | 官方末頁 “© 2026 Living Stream Ministry” |
+| 版權行 | 不輸出（Isaiah 2026-10-25 決定；MusicXML 等資料格式不受影響） | 同 | 官方末頁 “© 2026 Living Stream Ministry” |
 | 簡譜 01SMN 14 pt、和弦 Times New Roman 10 pt 深紅 #9C2323 原生下標、音符間距 | 維持現狀 | 維持現狀 | 官方向量輪廓無法量得字型／顏色 |
 | 和弦升降記號 | ♯／♭（F♯m、B♭；♭ 為比照 ♯ 推定，官方樣本無降記號和弦） | #／b 原樣 | 官方標語歌頁「F♯m」；只改顯示，資料、MIDI、MusicXML 不變 |
 
