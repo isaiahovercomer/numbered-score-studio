@@ -5,6 +5,7 @@
 ## [2.2.0] - 2026-10-24
 
 ### 新增
+- **Word 歌詞內文整句**（`lyricLayout`）：歌詞改為標楷體 14 pt 的內文段落、每節一行、以定位點對準音符（預設，依 Isaiah 2026-10-19 指示）；可選回舊版逐字方塊 `boxes`（輸出逐位元不變）。系統間距 lsm 單節 63 pt、classic 73 pt。
 - **瀏覽器煙霧測試**：Playwright（`npm run test:e2e`）在手機 390px 與桌面 1440px 檢查無水平捲動、主要控制項可見、可匯出 Word／MIDI；獨立於 `npm test`，CI 有獨立 job。（PR #5）
 - **邊界情況回歸測試**（`word-edge.test.js`）：特殊字元、空輸入、多節、超出一頁、和弦靠近等。（PR #6）
 - **DOCX 位元組比對測試**（`golden-docx.test.js`）與 `score-edit.test.js`。（PR #8）

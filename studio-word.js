@@ -10,13 +10,15 @@ export function connectWordExport({getScore, status, download}) {
     verseMarks: $('wordMarks').value,
     tempo: $('wordTempo').checked,
     copyright: $('wordCopyright').value,
-    wording: $('wordWording').checked
+    wording: $('wordWording').checked,
+    lyricLayout: $('wordLyricLayout').value
   });
   const wordHint = () => {
     const o = wordOptions(),
       p = PRESETS[o.preset];
     $('wordHint').innerHTML =
-      `${PAPERS[o.paper].name} · 01SMN 簡譜 · ${p.textFont}歌詞<br>深紅和弦／數字下標 · 詞譜整組置中`;
+      `${PAPERS[o.paper].name} · 01SMN 簡譜 · ${o.lyricLayout === 'inline' ? '標楷體 14 pt 歌詞（內文）' : p.textFont + '歌詞'}` +
+      '<br>深紅和弦／數字下標 · 詞譜整組置中';
   };
   $('wordPreset').onchange = () => {
     const p = PRESETS[$('wordPreset').value];
@@ -24,9 +26,10 @@ export function connectWordExport({getScore, status, download}) {
     $('wordMarks').value = p.verseMarks;
     $('wordTempo').checked = p.tempo;
     $('wordWording').checked = p.wording;
+    $('wordLyricLayout').value = p.lyricLayout;
     wordHint();
   };
-  for (const id of ['wordPaper', 'wordMarks', 'wordTempo', 'wordWording']) $(id).onchange = wordHint;
+  for (const id of ['wordPaper', 'wordMarks', 'wordTempo', 'wordWording', 'wordLyricLayout']) $(id).onchange = wordHint;
   $('exportWord').onclick = () => {
     let s;
     try {

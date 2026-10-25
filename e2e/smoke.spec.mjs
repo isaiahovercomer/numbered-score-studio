@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {chromium} from 'playwright-core';
 import {startServer} from './serve.mjs';
+import {readZip} from '../test-helpers.js';
 
 const VIEWPORTS = [{name: 'mobile-390', width: 390, height: 844, isMobile: true, hasTouch: true}, {name: 'desktop-1440', width: 1440, height: 900}];
 const MAIN_CONTROLS = ['#loadExample', '#tabAudio', '#tabImage', '#tabData', '#title', '#key', '#bpm', '#exportWord', '#render', '#midi', '#saveJson'];
@@ -128,6 +129,53 @@ test('[mobile-390] 歌詞字數不符時顯示診斷，匯出 Word／MusicXML �
       await page.fill('#lyrics', ly(75));
       await page.locator('#lyricDiag').scrollIntoViewIfNeeded();
       await page.screenshot({path: `${SHOT_DIR}/lyric-diag-390.png`});
+    }
+    assert.deepEqual(problems, []);
+  } finally {
+    await context.close();
+  }
+});
+
+// 歌詞「內文整句」排法（手機 390px）：選項可選、下載的 DOCX 歌詞為內文定位點段落，切換版式時回到該版式預設。歌詞為自擬示意文字。
+test('[mobile-390] Word 歌詞排法：內文整句', async () => {
+  const syl = '甲乙丙丁戊己庚辛壬癸';
+  const lyr = [0, 1]
+    .map(k => `${k + 1}、\n` + Array.from({length: 76}, (_, i) => syl[(i + k) % 10]).join(''))
+    .join('\n\n');
+  const context = await browser.newContext({
+    viewport: {width: 390, height: 844},
+    isMobile: true,
+    hasTouch: true,
+    acceptDownloads: true
+  });
+  await context.route(url => !url.href.startsWith(srv.url), route => route.abort());
+  const page = await context.newPage();
+  const problems = [];
+  page.on('pageerror', e => problems.push('pageerror: ' + e.message));
+  page.on('console', m => {
+    if (m.type() === 'error') problems.push('console: ' + m.text());
+  });
+  try {
+    await page.goto(srv.url);
+    await page.click('#loadExample');
+    await page.waitForFunction(() => document.querySelectorAll('#measures .measure').length > 0);
+    await page.fill('#lyrics', lyr);
+    await page.evaluate(() => (document.querySelector('.word-options').open = true));
+    await page.selectOption('#wordLyricLayout', 'inline');
+    const box = await page.locator('#wordLyricLayout').boundingBox();
+    assert.ok(box.height >= 40, `歌詞排法選單觸控目標太小（${box.height}px）`);
+    const w = await noHorizontalScroll(page);
+    assert.ok(w.scroll <= w.client, `水平捲動：scrollWidth ${w.scroll} > ${w.client}`);
+    const [docx] = await Promise.all([page.waitForEvent('download'), page.click('#exportWord')]);
+    const bytes = new Uint8Array(fs.readFileSync(await docx.path()));
+    assert.equal(Buffer.from(bytes.subarray(0, 2)).toString('latin1'), 'PK');
+    const xml = readZip(bytes)['word/document.xml'];
+    assert.match(xml, /<w:tab w:val="left"/);
+    for (const t of xml.matchAll(/<wps:txbx>.*?<\/wps:txbx>/gs)) assert.doesNotMatch(t[0], /甲|乙|丙/);
+    for (const preset of ['classic', 'lsm']) {
+      await page.selectOption('#wordPreset', preset);
+      const want = await page.evaluate(async p => (await import('./word-export.js')).PRESETS[p].lyricLayout, preset);
+      assert.equal(await page.inputValue('#wordLyricLayout'), want);
     }
     assert.deepEqual(problems, []);
   } finally {

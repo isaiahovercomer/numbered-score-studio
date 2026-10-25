@@ -1,4 +1,4 @@
-// 鎖定 Word 排版規格。前半（classic）鎖定使用者原有偏好（見 NOTATION_RULES.md），逐位元與改版前相同；
+// 鎖定 Word 排版規格。前半（classic）鎖定使用者原有偏好（見 NOTATION_RULES.md）；歌詞英數改 Times New Roman 為刻意變更；
 // 後半（lsm）鎖定水流職事站官方標語歌頁規格（recovery-format-guide.md A.10、B26ANCC01zht p.2 實測）。
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -6,6 +6,8 @@ import {fromTranscription} from './score-bridge.js';
 import {readZip} from './test-helpers.js';
 import {wordBlob, layout, verseMark, keyName, wordingHints, resolveOptions, parseVerses} from './word-export.js';
 const CLASSIC = {preset: 'classic'};
+// 舊版逐字方塊排法（2026-10-19 起預設改為 inline 內文整句）：以下鎖定 boxes 的測試明確指定。
+const BOXES = {lyricLayout: 'boxes'};
 
 const data = {
   title: '版面測試',
@@ -34,9 +36,9 @@ async function docBytes(s, opts) {
 function runs(xml) {
   return [
     ...xml.matchAll(
-      /<w:r><w:rPr><w:rFonts w:ascii="([^"]*)"[^>]*\/><w:color w:val="([0-9A-F]{6})"\/><w:sz w:val="(\d+)"\/>(<w:vertAlign w:val="subscript"\/>)?<\/w:rPr><w:t xml:space="preserve">([^<]*)<\/w:t><\/w:r>/g
+      /<w:r><w:rPr><w:rFonts w:ascii="([^"]*)"[^>]*?w:eastAsia="([^"]*)"\/><w:color w:val="([0-9A-F]{6})"\/><w:sz w:val="(\d+)"\/>(<w:vertAlign w:val="subscript"\/>)?<\/w:rPr><w:t xml:space="preserve">([^<]*)<\/w:t><\/w:r>/g
     )
-  ].map(m => ({font: m[1], color: m[2], pt: Number(m[3]) / 2, sub: Boolean(m[4]), text: m[5]}));
+  ].map(m => ({font: m[1], ea: m[2], color: m[3], pt: Number(m[4]) / 2, sub: Boolean(m[5]), text: m[6]}));
 }
 
 test('[classic] DOCX 是完整可開啟的 OOXML 封包（CRC 正確、必要部件齊全）', async () => {
@@ -54,7 +56,7 @@ test('[classic] 頁面為 A4 直式（11906×16838 twips），且不強制橫向
 });
 
 test('[classic] 標題標楷體 22pt 置中；簡譜 01SMN 14pt；歌詞標楷體 13.5pt', async () => {
-  const xml = readZip(await docBytes(makeScore(), CLASSIC))['word/document.xml'];
+  const xml = readZip(await docBytes(makeScore(), {...CLASSIC, ...BOXES}))['word/document.xml'];
   const all = runs(xml);
   assert.ok(all.length > 0);
   const title = all.find(r => r.text === '版面測試');
@@ -65,13 +67,14 @@ test('[classic] 標題標楷體 22pt 置中；簡譜 01SMN 14pt；歌詞標楷�
   assert.ok(score.every(r => r.pt === 14 && r.color === '000000'));
   for (const ch of ['甲', '乙', '丙', '丁']) {
     const r = all.find(x => x.text === ch);
-    assert.deepEqual([r.font, r.pt], ['標楷體', 13.5], `歌詞「${ch}」字型或字級不符`);
+    // 中文字型標楷體；英數字型 Times New Roman（2026-10-25 Isaiah 決定：歌詞英數兩種版式都用 Times New Roman）。
+    assert.deepEqual([r.ea, r.font, r.pt], ['標楷體', 'Times New Roman', 13.5], `歌詞「${ch}」字型或字級不符`);
   }
 });
 
 test('[classic] 和弦為 Times New Roman 深紅 #9C2323，只有和弦數字使用原生下標', async () => {
   const all = runs(readZip(await docBytes(makeScore(), CLASSIC))['word/document.xml']);
-  const chord = all.filter(r => r.font === 'Times New Roman');
+  const chord = all.filter(r => r.ea === 'Times New Roman');
   assert.deepEqual(
     chord.map(r => [r.text, r.sub]),
     [
@@ -85,12 +88,12 @@ test('[classic] 和弦為 Times New Roman 深紅 #9C2323，只有和弦數字使
   // 簡譜音符的數字絕不可下標。
   assert.ok(all.filter(r => r.font === '01SMN').every(r => !r.sub));
   // 和弦以外的文字顏色不可被染成深紅。
-  assert.ok(all.filter(r => r.font !== 'Times New Roman').every(r => r.color === '000000'));
+  assert.ok(all.filter(r => r.ea !== 'Times New Roman').every(r => r.color === '000000'));
 });
 
 test('[classic] 節次「一、二、」只在各節第一個字前出現一次，且歌詞逐字保留', async () => {
-  const all = runs(readZip(await docBytes(makeScore(), CLASSIC))['word/document.xml']);
-  const lyricText = all.filter(r => r.font === '標楷體' && r.pt === 13.5).map(r => r.text);
+  const all = runs(readZip(await docBytes(makeScore(), {...CLASSIC, ...BOXES}))['word/document.xml']);
+  const lyricText = all.filter(r => r.ea === '標楷體' && r.pt === 13.5).map(r => r.text);
   assert.equal(lyricText.filter(t => t === '一、').length, 1);
   assert.equal(lyricText.filter(t => t === '二、').length, 1);
   assert.deepEqual(lyricText.filter(t => /\p{Script=Han}/u.test(t) && !t.endsWith('、')).sort(), [
@@ -161,7 +164,7 @@ test('[lsm] 可選 A4（paper:"a4"），邊界仍為 32.5 pt', async () => {
 });
 
 test('[lsm] 標題明體 14 pt 置中；歌詞明體 12 pt；阿拉伯數字 Times New Roman', async () => {
-  const all = runs2(await lsmXml());
+  const all = runs2(await lsmXml(makeScore(), BOXES));
   const title = all.find(r => r.text === '版面測試');
   assert.deepEqual([title.ea, title.ascii, title.pt], ['新細明體', 'Times New Roman', 14]);
   for (const ch of ['甲', '乙', '丙', '丁']) {
@@ -193,12 +196,12 @@ test('keyName：降記號寫「降B大調」', () => {
 });
 
 test('[lsm] 節次為 ①②（緊貼第一字）；可改回「一、二、」；超過 20 節仍有符號', async () => {
-  const all = runs2(await lsmXml());
+  const all = runs2(await lsmXml(makeScore(), BOXES));
   const lyric = all.filter(r => r.pt === 12).map(r => r.text);
   assert.equal(lyric.filter(t => t === '①').length, 1);
   assert.equal(lyric.filter(t => t === '②').length, 1);
   assert.ok(!lyric.includes('一、'));
-  const classic = runs2(await lsmXml(makeScore(), {verseMarks: 'chinese'})).map(r => r.text);
+  const classic = runs2(await lsmXml(makeScore(), {verseMarks: 'chinese', ...BOXES})).map(r => r.text);
   assert.ok(classic.includes('一、') && classic.includes('二、') && !classic.includes('①'));
   assert.deepEqual(
     [0, 1, 2, 3, 19, 20, 34, 35, 49].map(i => verseMark(i)),
@@ -273,10 +276,10 @@ test('[css] 深色「帶走你的作品」面板內的 Word 版式選單有淺�
 test('[lsm] 每行系統間距：單節歌詞≈58 pt（官方 57～58 pt）；每多一節 +19 pt', async () => {
   const one = makeScore();
   one.lyrics = '甲乙';
-  const xml1 = await lsmXml(one);
+  const xml1 = await lsmXml(one, BOXES);
   assert.match(xml1, /<w:spacing w:line="1060" w:lineRule="exact" w:after="100"\/>/); // 53 pt + 5 pt = 58 pt
-  assert.match(await lsmXml(makeScore()), /w:line="1440"/); // 兩節：72 pt
-  assert.match(await lsmXml(makeScore(), CLASSIC), /w:line="1640"/); // 原版式不變：44+2×19=82 pt
+  assert.match(await lsmXml(makeScore(), BOXES), /w:line="1440"/); // 兩節：72 pt
+  assert.match(await lsmXml(makeScore(), {...CLASSIC, ...BOXES}), /w:line="1640"/); // 原版式不變：44+2×19=82 pt
 });
 
 test('[lsm] 排版寬度不超出 Letter 可用寬度（612−65＝547 pt）', () => {
@@ -313,13 +316,13 @@ test('[lsm] 技能參考資料（notationLayout）路徑同樣套用官方標題
     fingerprint: JSON.stringify([s.sections, s.key, s.lyrics]),
     systems: [{raw: '1/2/', note_q: [0, 8], lyrics: [{syllables: ['甲', '乙']}]}]
   };
-  const lsm = await lsmXml(s, {copyright: '© 2026 Living Stream Ministry'});
+  const lsm = await lsmXml(s, {copyright: '© 2026 Living Stream Ministry', ...BOXES});
   assert.match(lsm, /C大調/);
   assert.match(lsm, /①/);
   assert.doesNotMatch(lsm, /一、/);
   assert.match(lsm, /Living Stream/);
   assert.match(lsm, /w:line="1100"/); // 參考路徑列高＝一般路徑 +2 pt：(34+2)+19 = 55 pt
-  const classic = await lsmXml(s, CLASSIC);
+  const classic = await lsmXml(s, {...CLASSIC, ...BOXES});
   assert.match(classic, /1=C　4\/4　♩ = 120/);
   assert.match(classic, /一、/);
 });

@@ -16,6 +16,8 @@ function makeScore(n = 8, {title = '邊界測試', key = 'C', chords = []} = {})
 }
 const parts = async (s, opts) => readZip(new Uint8Array(await wordBlob(s, opts).arrayBuffer()));
 const docXml = async (s, opts) => (await parts(s, opts))['word/document.xml'];
+// 舊版逐字方塊排法（2026-10-19 起預設改為 inline 內文整句）：以下鎖定 boxes 的測試明確指定。
+const BOXES = {lyricLayout: 'boxes'};
 // XML 1.0 不允許的字元（控制字元、U+FFFE、U+FFFF）。
 const INVALID_XML = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/;
 const texts = xml => [...xml.matchAll(/<w:t xml:space="preserve">([^<]*)<\/w:t>/g)].map(m => m[1]);
@@ -87,13 +89,13 @@ test('歌詞字數與音位不符時給出清楚的錯誤（含實際字數）�
 test('多節：12 節各有一個節次標記（①～⑫）且只標在第一個系統；系統高度隨節數增加', async () => {
   const s = makeScore(8);
   s.lyrics = Array.from({length: 12}, (_, i) => `${i + 1}、\n甲乙丙丁戊己庚辛`).join('\n\n');
-  const xml = await docXml(s);
+  const xml = await docXml(s, BOXES);
   const marks = texts(xml).filter(t => /^[\u2460-\u246b]$/.test(t));
   assert.deepEqual(marks, ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩', '⑪', '⑫']);
   const one = makeScore(8);
   one.lyrics = '一、\n甲乙丙丁戊己庚辛';
   const line = x => Number(x.match(/<w:spacing w:line="(\d+)" w:lineRule="exact" w:after="100"\/><w:keepLines\/>/)[1]);
-  assert.equal(line(xml) - line(await docXml(one)), 11 * 19 * 20, '每多一節 +19 pt');
+  assert.equal(line(xml) - line(await docXml(one, BOXES)), 11 * 19 * 20, '每多一節 +19 pt');
 });
 
 test('多節：超過 50 節時節次標記退回「51、」寫法而不是壞掉', async () => {
@@ -108,9 +110,9 @@ test('超出一頁：長譜分成多個系統，每個系統都是 keepLines＋�
   for (const preset of PRESETS) {
     const s = makeScore(300);
     s.lyrics = '一、\n' + '歌'.repeat(300);
-    const {systems, options} = layout(s, preset);
+    const {systems, options} = layout(s, {...preset, ...BOXES});
     assert.ok(systems.length > 4, '300 個音至少分成多個系統');
-    const xml = await docXml(s, preset);
+    const xml = await docXml(s, {...preset, ...BOXES});
     const rowParagraphs =
       xml.match(/<w:spacing w:line="\d+" w:lineRule="exact" w:after="100"\/><w:keepLines\/>/g) || [];
     assert.equal(rowParagraphs.length, systems.length, `${preset.preset}：每個系統一個 keepLines 段落`);

@@ -9,6 +9,19 @@ const esc = s =>
 export function run(text, font, size, color = '000000', sub = false, ascii = font, italic = false) {
   return `<w:r><w:rPr><w:rFonts w:ascii="${ascii}" w:hAnsi="${ascii}" w:eastAsia="${font}"/>${italic ? '<w:i/>' : ''}<w:color w:val="${color}"/><w:sz w:val="${size * 2}"/>${sub ? `<w:vertAlign w:val="${sub === 'super' ? 'superscript' : 'subscript'}"/>` : ''}</w:rPr><w:t xml:space="preserve">${esc(text)}</w:t></w:r>`;
 }
+// 內文歌詞段落：每項一個左定位點（twip，相對左邊界）＋ Tab ＋文字。pPr 子元素須依 OOXML 順序。
+// items = [{pos, text}]（pos 單位 pt，由小到大）；last = 本列最後一節（不加 keepNext、加段後距 after）。
+export function lyricParagraph(items, {last = false, after = 0, font, size, ascii, line}) {
+  if (items.length > 64) throw Error('一行歌詞超過 64 個定位點，Word 無法開啟；請把版面改窄或分行。');
+  const tabs = items.map(it => `<w:tab w:val="left" w:pos="${Math.round(it.pos * 20)}"/>`).join('');
+  const pPr =
+    `<w:pPr>${last ? '' : '<w:keepNext/>'}<w:tabs>${tabs}</w:tabs>` +
+    '<w:autoSpaceDE w:val="0"/><w:autoSpaceDN w:val="0"/><w:snapToGrid w:val="0"/>' +
+    `<w:spacing w:before="0" w:after="${last ? after : 0}" w:line="${Math.round(line * 20)}" w:lineRule="exact"/>` +
+    '<w:ind w:left="0" w:right="0" w:firstLine="0"/><w:jc w:val="left"/></w:pPr>';
+  const runs = items.map(it => '<w:r><w:tab/></w:r>' + run(it.text, font, size, '000000', false, ascii)).join('');
+  return `<w:p>${pPr}${runs}</w:p>`;
+}
 let shapeId = 0;
 export const resetShapeIds = () => {
   shapeId = 0;
