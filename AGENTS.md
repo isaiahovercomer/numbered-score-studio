@@ -28,7 +28,7 @@
 
 ## 4. 測試
 - **`npm test` 必須全過**（只用 Node 內建模組，不需安裝任何東西）；新行為要補測試，修 bug 要補「修正前會失敗」的回歸測試。
-- 主要測試：`music.test.js`、`studio.test.js`、`worker.test.js`、`word-layout.test.js`（鎖定兩種 Word 版式）、`word-edge.test.js`（高風險邊界）、`wording.test.js`（用字規則）、`golden-docx.test.js`（DOCX 位元組比對）、`score-edit.test.js`、`musicxml.test.js`（MusicXML 匯出）、`lyrics-diagnose.test.js`（一字一音診斷）、`repo-hygiene.test.js`、`line-length.test.js`（行寬 120；舊檔的超長行數只准減少）。新增測試檔記得加進 `package.json` 的 `test` 腳本。
+- 主要測試：`music.test.js`、`studio.test.js`、`worker.test.js`、`word-layout.test.js`（鎖定兩種 Word 版式）、`word-edge.test.js`（高風險邊界）、`copyright-fit.test.js`（版權行自動縮字）、`wording.test.js`（用字規則）、`golden-docx.test.js`（DOCX 位元組比對）、`score-edit.test.js`、`musicxml.test.js`（MusicXML 匯出）、`lyrics-diagnose.test.js`（一字一音診斷）、`repo-hygiene.test.js`、`line-length.test.js`（行寬 120；舊檔的超長行數只准減少）。新增測試檔記得加進 `package.json` 的 `test` 腳本。
 - **刻意改變排版或用字規則**時，先改測試反映新規格，再 `UPDATE_GOLDEN=1 npm test` 更新 `golden-docx.json`，並在 PR 說明為何輸出改變。
 - 瀏覽器煙霧測試（可選）：`npm install && npm run test:e2e`（手機 390px／桌面 1440px，檢查無水平捲動、主要控制項可見、可匯出 Word／MIDI）。需要本機 Chrome（可用 `CHROME_PATH`）。CI 有獨立的 `e2e` job，不影響 `npm test`。
 - 改 UI 或拆檔時，除了測試，也用 Playwright 實際操作比對行為（重構 PR 的做法）。
@@ -54,7 +54,7 @@
 - **全部繁體中文、手機友善**：390px 寬不得水平捲動，觸控目標至少 40px 高；介面要能在手機操作。
 - 簡譜字型 **01SMN 是私人字型**，Word 裝置自行安裝；網頁以一般文字預覽，不內嵌字型。
 - 和弦：Times New Roman、深紅 `#9C2323`，數字用 **Word 原生下標**；音符數字不可下標。
-- 簡譜 01SMN 14 pt；整組詞譜置中、各行共同左緣；優先一頁，放不下正常分頁，**不縮小、不刪內容**；每個詞譜行 `keepLines`。
+- 簡譜 01SMN 14 pt；整組詞譜置中、各行共同左緣；優先一頁，放不下正常分頁，**不縮小、不刪內容**（版權行依 §7 自動縮字）；每個詞譜行 `keepLines`。
 - 歌詞逐字對位：各節字數＝起音數，不符就**明確報錯**，不補刪、不錯配；所有文字與標點保留。
 - 建議和弦、音訊和弦估計、使用者確認和弦要分開標示；單音配和弦不可說成「錄音伴奏辨識」。
 - 不要改排版規則或輸出行為，**除非是明確的 bug**；規則變動要先列為「需 Isaiah 決定」。
@@ -69,11 +69,12 @@
 | 歌詞 | 明體 12 pt；阿拉伯數字 Times New Roman | 標楷體 13.5 pt |
 | 系統行距 | 單節歌詞約 58 pt（34 + 節數 × 19 + 段後 5 pt），每多一節 +19 pt | 單節約 68 pt（44 + 節數 × 19 + 段後 5 pt） |
 | 頁首／頁碼 | 無 | 無 |
-| 版權行 | 可選，末頁置中斜體 10 pt；預設不加 | 同 |
+| 版權行 | 可選，末頁置中斜體；預設 10 pt，過長自動縮至最小 7 pt，再不行分兩行；預設不加 | 同 |
 | 官方用字替換 | 預設開 | 預設關 |
 
 - **官方量測不到的項目維持現狀**：01SMN 14 pt、和弦字型字級顏色與下標、音符間距。
-- 紙張預設 Letter 或 A4、速度顯示、版權行等是否調整，由 Isaiah 決定。
+- 紙張預設 Letter 或 A4、速度顯示是否調整，由 Isaiah 決定。
+- 版權行依 Isaiah 決定自動縮字：超過 360 pt 先擴至版心，以 0.5 pt 遞減至 7 pt；仍放不下則分兩行。
 
 ## 8. 官方用字（只改輸出，規則在 `wording-rules.js`）
 - 匯出時才替換標題與歌詞；編輯器稿、JSON、MIDI、MP3 不動。所有規則**前後等長**，逐字對位不受影響。

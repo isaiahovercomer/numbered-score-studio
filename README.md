@@ -66,3 +66,6 @@ worker.js 是後端原始碼，wrangler.toml 包含環境變數與 QUOTA Durable
 「下載 MusicXML」會把目前編輯中的樂譜輸出成單一旋律聲部的 MusicXML 4.0（`.musicxml`），可在 MuseScore 等軟體開啟做五線譜、列印與校對。內容含音高與時值、休止、延音連結、調號、拍號、速度、弱起小節、和弦符號與逐字對位的多節歌詞。
 
 限制：每個段落只寫一次（不展開反覆）；只有旋律聲部，不含伴奏與自訂和弦 voicing；歌詞字數須與起音相符；不支援小調與三連音；輸出維持你的原文，不套用官方用字替換；MusicXML 沒有簡譜表示，匯入後是五線譜。欄位對照見 `NOTATION_RULES.md`。程式在 `musicxml.js`，測試在 `musicxml.test.js`（含 `fixtures/musicxml-demo.musicxml` 示意黃金檔，內容為自擬文字）。
+
+版權行預設為末頁置中斜體 10 pt；過長時先擴至版心，再以 0.5 pt 自動縮至最小 7 pt，
+仍放不下則分兩行，保留全部文字。Word 面板會即時提示縮字或分行結果。

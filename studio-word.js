@@ -1,5 +1,7 @@
 // Word 匯出面板：版式選項、說明文字、匯出與官方用字回報。
 import {wordBlob, PRESETS, PAPERS, wordingHints, wordingChanges, describeChanges} from './word-export.js';
+import {copyrightFit} from './copyright-fit.js';
+import {resolveOptions} from './word-options.js';
 import {$} from './dom.js';
 import {explainLyricError} from './lyrics-diagnose.js';
 
@@ -14,9 +16,18 @@ export function connectWordExport({getScore, status, download}) {
   });
   const wordHint = () => {
     const o = wordOptions(),
-      p = PRESETS[o.preset];
+      p = PRESETS[o.preset],
+      resolved = resolveOptions(o),
+      fit = copyrightFit(resolved.copyright, resolved),
+      hint =
+        fit.lines === 2
+          ? '版權行已縮到最小 7 pt，分兩行'
+          : fit.pt < 10
+            ? `版權行較長，匯出時縮為 ${fit.pt} pt`
+            : '';
     $('wordHint').innerHTML =
-      `${PAPERS[o.paper].name} · 01SMN 簡譜 · ${p.textFont}歌詞<br>深紅和弦／數字下標 · 詞譜整組置中`;
+      `${PAPERS[o.paper].name} · 01SMN 簡譜 · ${p.textFont}歌詞<br>深紅和弦／數字下標 · 詞譜整組置中` +
+      (hint ? `<br>${hint}` : '');
   };
   $('wordPreset').onchange = () => {
     const p = PRESETS[$('wordPreset').value];
@@ -27,6 +38,8 @@ export function connectWordExport({getScore, status, download}) {
     wordHint();
   };
   for (const id of ['wordPaper', 'wordMarks', 'wordTempo', 'wordWording']) $(id).onchange = wordHint;
+  $('wordCopyright').oninput = wordHint;
+  wordHint();
   $('exportWord').onclick = () => {
     let s;
     try {

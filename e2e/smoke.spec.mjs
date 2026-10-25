@@ -134,3 +134,40 @@ test('[mobile-390] 歌詞字數不符時顯示診斷，匯出 Word／MusicXML �
     await context.close();
   }
 });
+
+// R8：手機版權提示隨輸入更新，長版權仍可下載 Word。
+test('[mobile-390] 長版權即時提示、無水平捲動且可下載 Word', async () => {
+  const context = await browser.newContext({viewport: {width: 390, height: 844}, acceptDownloads: true});
+  await context.route(url => !url.href.startsWith(srv.url), route => route.abort());
+  const page = await context.newPage();
+  try {
+    await page.goto(srv.url);
+    await page.setInputFiles('#jsonFile', {
+      name: '合成測試.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(JSON.stringify({
+        title: '合成版權測試',
+        target_key: 'C',
+        bpm_estimate: 88,
+        notes: [{q: 0, duration: 4, midi: 60}],
+        chords: []
+      }))
+    });
+    await page.waitForFunction(() => document.querySelectorAll('#measures .measure').length > 0);
+    await page.locator('.word-options summary').click();
+    await page.fill('#wordCopyright', '甲'.repeat(120));
+    assert.match(await page.textContent('#wordHint'), /版權行已縮到最小 7 pt，分兩行/);
+    const w = await noHorizontalScroll(page);
+    assert.ok(w.scroll <= w.client, '長版權提示不得造成水平捲動');
+    const [docx] = await Promise.all([page.waitForEvent('download'), page.click('#exportWord')]);
+    assert.equal(fs.readFileSync(await docx.path()).subarray(0, 2).toString('latin1'), 'PK');
+    await page.fill('#wordCopyright', '乙'.repeat(70));
+    assert.match(await page.textContent('#wordHint'), /版權行較長，匯出時縮為 [78](\.5)? pt/);
+    await page.selectOption('#wordPaper', 'a4');
+    assert.match(await page.textContent('#wordHint'), /版權行較長，匯出時縮為 7 pt/);
+    await page.fill('#wordCopyright', '© 測試 <&>');
+    assert.doesNotMatch(await page.textContent('#wordHint'), /版權行較長|版權行已縮/);
+  } finally {
+    await context.close();
+  }
+});
