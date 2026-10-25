@@ -83,6 +83,59 @@ for (const vp of VIEWPORTS) {
   });
 }
 
+// E1：一字一音診斷（手機 390px）。歌詞為自擬示意文字。
+test('[mobile-390] 歌詞字數不符時顯示診斷，匯出 Word／MusicXML 附上診斷且不下載', async () => {
+  const ly = n => Array.from({length: n}, (_, i) => '甲乙丙丁戊己庚辛'[i % 8]).join('');
+  const context = await browser.newContext({
+    viewport: {width: 390, height: 844},
+    isMobile: true,
+    hasTouch: true,
+    acceptDownloads: true
+  });
+  await context.route(url => !url.href.startsWith(srv.url), route => route.abort());
+  const page = await context.newPage();
+  const problems = [];
+  page.on('pageerror', e => problems.push('pageerror: ' + e.message));
+  page.on('console', m => {
+    if (m.type() === 'error') problems.push('console: ' + m.text());
+  });
+  let downloads = 0;
+  page.on('download', () => downloads++);
+  try {
+    await page.goto(srv.url);
+    await page.click('#loadExample');
+    await page.waitForFunction(() => document.querySelectorAll('#measures .measure').length > 0);
+    await page.fill('#lyrics', ly(75));
+    const diag = await page.textContent('#lyricDiag');
+    assert.match(diag, /少 1 字/);
+    assert.match(diag, /副歌第 16 小節/);
+    const w = await noHorizontalScroll(page);
+    assert.ok(w.scroll <= w.client, `診斷顯示後水平捲動：scrollWidth ${w.scroll} > ${w.client}`);
+    for (const btn of ['#exportWord', '#musicxml']) {
+      await page.locator(btn).scrollIntoViewIfNeeded();
+      await page.click(btn);
+      const st = await page.textContent('#status');
+      assert.match(st, /^歌詞需逐字對位/, btn);
+      assert.match(st, /第 1 節少 1 字/, btn);
+      assert.match((await page.getAttribute('#status', 'class')) || '', /error/, btn);
+    }
+    await page.waitForTimeout(5000);
+    assert.equal(downloads, 0, '字數不符時不應下載');
+    await page.fill('#lyrics', ly(76));
+    assert.equal(await page.textContent('#lyricDiag'), '');
+    await page.fill('#lyrics', '');
+    assert.equal(await page.textContent('#lyricDiag'), '');
+    if (SHOT_DIR) {
+      await page.fill('#lyrics', ly(75));
+      await page.locator('#lyricDiag').scrollIntoViewIfNeeded();
+      await page.screenshot({path: `${SHOT_DIR}/lyric-diag-390.png`});
+    }
+    assert.deepEqual(problems, []);
+  } finally {
+    await context.close();
+  }
+});
+
 // 歌詞「內文整句」排法（手機 390px）：選項可選、下載的 DOCX 歌詞為內文定位點段落，切換版式時回到該版式預設。歌詞為自擬示意文字。
 test('[mobile-390] Word 歌詞排法：內文整句', async () => {
   const syl = '甲乙丙丁戊己庚辛壬癸';

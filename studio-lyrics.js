@@ -2,6 +2,7 @@
 import {writtenEvents} from './score-bridge.js';
 import {parseVerses} from './word-export.js';
 import {$} from './dom.js';
+import {diagnoseLyrics, formatDiagnosis} from './lyrics-diagnose.js';
 
 export function connectLyrics({getScore, installScore, status}) {
   $('lyricFile').onchange = async e => {
@@ -32,7 +33,10 @@ export function connectLyrics({getScore, installScore, status}) {
         (verses.length
           ? ` · ${verses.length} 節歌詞 · 各節 ${verses.map(v => v.length).join('／')} 字`
           : ' · 尚未加入歌詞');
-    } catch {}
+      $('lyricDiag').textContent = formatDiagnosis(diagnoseLyrics(s));
+    } catch {
+      $('lyricDiag').textContent = '';
+    }
   }
   $('lyrics').addEventListener('input', updateCount);
   document.addEventListener('scorechange', updateCount);

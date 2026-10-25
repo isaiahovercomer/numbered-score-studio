@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {fromTranscription} from './score-bridge.js';
-import {wordBlob, layout} from './word-export.js';
+import {wordBlob, layout, chordLabel} from './word-export.js';
 import {readZip} from './test-helpers.js';
 
 const PRESETS = [{preset: 'lsm'}, {preset: 'classic'}];
@@ -163,4 +163,26 @@ test('版權行長度上限 120 字（超過截斷）；兩種版式都可指定
   assert.ok(!texts(xml).some(t => t.length > 120));
   assert.ok(texts(await docXml(makeScore(), {preset: 'classic', copyright: 'zzz'})).includes('zzz'));
   for (const preset of PRESETS) assert.ok(!texts(await docXml(makeScore(), preset)).some(t => /©|Copyright/i.test(t)));
+});
+
+test('chordLabel：symbol 只換根音與斜線低音的 #／b，品質字母不動；ascii 原樣', () => {
+  const cases = {
+    'F#m': 'F\u266Fm',
+    Bb: 'B\u266D',
+    'C#m7/G#': 'C\u266Fm7/G\u266F',
+    'Bb/D': 'B\u266D/D',
+    Ebmaj7: 'E\u266Dmaj7',
+    Abm: 'A\u266Dm',
+    Bdim: 'Bdim',
+    G7sus4: 'G7sus4',
+    Dm: 'Dm',
+    Bm7: 'Bm7',
+    'Gsus2/B': 'Gsus2/B'
+  };
+  for (const [from, to] of Object.entries(cases)) {
+    assert.equal(chordLabel(from, 'symbol'), to, from);
+    assert.equal(chordLabel(from, 'ascii'), from);
+    assert.equal([...chordLabel(from, 'symbol')].length, from.length, '一字對一字，寬度不變');
+  }
+  assert.equal(chordLabel('F#m'), 'F#m');
 });

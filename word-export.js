@@ -3,11 +3,11 @@ import {writtenEvents} from './score-bridge.js';
 import {widths} from './font-metrics.js';
 import {applyWordingToScore, wordingHints} from './wording.js';
 import {PAPERS, resolveOptions} from './word-options.js';
-import {verseMark, keyName, token, parseVerses} from './word-notation.js';
+import {verseMark, keyName, token, parseVerses, chordLabel} from './word-notation.js';
 import {run, box, tie, zipStore, copyrightAnchor, resetShapeIds, lyricParagraph} from './word-docx.js';
 // 公開 API 維持不變：其他檔案仍從 word-export.js 匯入這些名稱。
 export {PAPERS, PRESETS, DEFAULT_PRESET, resolveOptions} from './word-options.js';
-export {verseMark, keyName, token, parseVerses} from './word-notation.js';
+export {verseMark, keyName, token, parseVerses, chordLabel} from './word-notation.js';
 export {wordingHints, applyWording, applyWordingToScore, describeChanges} from './wording.js';
 const advance = raw => [...raw].reduce((n, c) => n + (widths[c] ?? 1), 0) * 14;
 export function layout(s, options) {
@@ -107,7 +107,7 @@ function markBox(vi, x, y, o) {
     : box(verseMark(vi, 'chinese'), x - 32, y, 30, 19, o.textFont, o.lyricPt, '000000', false, o.textAscii);
 }
 // 譜行方塊：音符、小節線、和弦、連結線（boxes 與 inline 共用）。extra(p, i, x) 讓 boxes 在音符與和弦之間插入歌詞方塊，維持原輸出順序。
-function rowShapes(row, offset, extra = () => '') {
+function rowShapes(row, offset, o, extra = () => '') {
   let shapes = '',
     tieStart = null;
   for (const [i, p] of row.entries()) {
@@ -118,7 +118,8 @@ function rowShapes(row, offset, extra = () => '') {
     for (const c of p.chords) {
       const cx = x + 7 + ((c.q - p.q) / p.duration) * p.width,
         w = Math.max(20, c.text.length * 6 + 4);
-      shapes += box(c.text, cx - w / 2, 0, w, 13, 'Times New Roman', 10, '9C2323', true);
+      const label = chordLabel(c.text, o.chordAccidentals);
+      shapes += box(label, cx - w / 2, 0, w, 13, 'Times New Roman', 10, '9C2323', true);
     }
     if (p.tied && tieStart === null) tieStart = offset;
     if (p.tied && !p.tieNext && tieStart !== null) {
@@ -136,7 +137,8 @@ function rowShapes(row, offset, extra = () => '') {
 // 內文整句：譜行段落（只放浮動方塊，固定行高）＋每節一個歌詞內文段落（標楷體、定位點對準音符），以 keepNext 串成一組。
 // items = [{pos, texts:[各節音節]}]；節次標記只在第一列，放在第一個有字的音左側 16（①）或 32 pt（一、）。
 function inlineRow(shapes, items, nVerses, first, scorePt, o) {
-  let xml = `<w:p><w:pPr><w:keepNext/><w:spacing w:before="0" w:after="0" w:line="${scorePt * 20}" w:lineRule="exact"/></w:pPr>${shapes}</w:p>`;
+  const sp = `<w:spacing w:before="0" w:after="0" w:line="${scorePt * 20}" w:lineRule="exact"/>`;
+  let xml = `<w:p><w:pPr><w:keepNext/>${sp}</w:pPr>${shapes}</w:p>`;
   for (let vi = 0; vi < nVerses; vi++) {
     const line = items.map(it => ({pos: it.pos, text: it.texts[vi]}));
     if (first && line.length)
@@ -167,7 +169,7 @@ export function wordBlob(s0, options) {
     for (const [ri, row] of systems.entries()) {
       if (o.lyricLayout === 'inline' && verses.length) {
         const items = row.filter(p => p.lyrics.length).map(p => ({pos: offset + p.x, texts: p.lyrics}));
-        body += inlineRow(rowShapes(row, offset), items, verses.length, ri === 0, 38, o);
+        body += inlineRow(rowShapes(row, offset, o), items, verses.length, ri === 0, 38, o);
         continue;
       }
       const height = o.rowBase + verses.length * 19;
@@ -190,7 +192,8 @@ export function wordBlob(s0, options) {
         }
         return out;
       };
-      body += `<w:p><w:pPr><w:spacing w:line="${height * 20}" w:lineRule="exact" w:after="100"/><w:keepLines/></w:pPr>${rowShapes(row, offset, lyricShapes)}</w:p>`;
+      const shapes = rowShapes(row, offset, o, lyricShapes);
+      body += `<w:p><w:pPr><w:spacing w:line="${height * 20}" w:lineRule="exact" w:after="100"/><w:keepLines/></w:pPr>${shapes}</w:p>`;
     }
   // Review status is shown in the site; avoid a trailing paragraph forcing a blank second page.
   if (o.copyright) body = body.replace(/<\/w:p>$/, () => copyrightAnchor(o.copyright, o) + '</w:p>');
@@ -279,7 +282,8 @@ function referenceBody(s, o) {
             ((positions[i + 1]?.x ?? positions[i].x + 14) - positions[i].x);
       }
       const w = Math.max(20, c.text.length * 6 + 4);
-      shapes += box(c.text, off + x + 7 - w / 2, 0, w, 13, 'Times New Roman', 10, '9C2323', true);
+      const label = chordLabel(c.text, o.chordAccidentals);
+      shapes += box(label, off + x + 7 - w / 2, 0, w, 13, 'Times New Roman', 10, '9C2323', true);
     }
     if (inline) {
       const n = Math.max(...r.lyrics.map(v => v.syllables.length)),

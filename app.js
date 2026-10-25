@@ -3,6 +3,7 @@ import {fromTranscription, parseChordChanges} from './score-bridge.js';
 import {parseNotes, formatNotes, chordVoicing, validateScore, midiBytes} from './music.js';
 import {renderAudio} from './audio.js';
 import {musicXmlBlob} from './musicxml.js';
+import {explainLyricError} from './lyrics-diagnose.js';
 import {$} from './dom.js';
 import {buildMixer} from './mixer.js';
 import {transposeScore, buildForm} from './score-edit.js';
@@ -256,10 +257,12 @@ $('midi').onclick = () => {
   }
 };
 $('musicxml').onclick = () => {
+  let s;
   try {
-    download(musicXmlBlob(currentScore()), safeName() + '.musicxml');
+    s = currentScore();
+    download(musicXmlBlob(s), safeName() + '.musicxml');
   } catch (e) {
-    status(e.message, true);
+    status(s ? explainLyricError(e, s) : e.message, true);
   }
 };
 $('saveJson').onclick = () => {

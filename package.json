@@ -1,10 +1,10 @@
 {
   "name": "numbered-score-studio",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test music.test.js studio.test.js worker.test.js word-layout.test.js wording.test.js word-edge.test.js golden-docx.test.js score-edit.test.js repo-hygiene.test.js musicxml.test.js word-lyrics-inline.test.js",
+    "test": "node --test music.test.js studio.test.js worker.test.js word-layout.test.js wording.test.js word-edge.test.js golden-docx.test.js score-edit.test.js repo-hygiene.test.js musicxml.test.js line-length.test.js lyrics-diagnose.test.js word-lyrics-inline.test.js",
     "test:e2e": "node --test e2e/smoke.spec.mjs"
   },
   "devDependencies": {

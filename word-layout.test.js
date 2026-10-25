@@ -325,3 +325,81 @@ test('[lsm] 技能參考資料（notationLayout）路徑同樣套用官方標題
   assert.match(classic, /1=C　4\/4　♩ = 120/);
   assert.match(classic, /一、/);
 });
+
+// 和弦 run：[文字, 'sub'|'super'|'']
+const CHORD_RUN = new RegExp(
+  '<w:color w:val="9C2323"/><w:sz w:val="20"/>(?:<w:vertAlign w:val="(sub|super)script"/>)?' +
+    '</w:rPr><w:t xml:space="preserve">([^<]*)<',
+  'g'
+);
+const chordRuns3 = xml =>
+  [...xml.matchAll(CHORD_RUN)].map(m => [m[2], m[1] || '']);
+
+test('[lsm] 技能參考資料（notationLayout）路徑的和弦同樣顯示 ♯／♭', async () => {
+  const s = fromTranscription({...data, chords: [{q: 0, text: 'F#m'}, {q: 8, text: 'Bb'}]});
+  s.lyrics = '甲乙';
+  s.notationLayout = {
+    fingerprint: JSON.stringify([s.sections, s.key, s.lyrics]),
+    systems: [{raw: '1/2/', note_q: [0, 8], lyrics: [{syllables: ['甲', '乙']}]}]
+  };
+  assert.deepEqual(chordRuns3(await lsmXml(s)), [
+    ['F', ''],
+    ['\u266F', 'super'],
+    ['m', ''],
+    ['B', ''],
+    ['\u266D', 'super']
+  ]);
+  assert.deepEqual(chordRuns3(await lsmXml(s, CLASSIC)), [
+    ['F#m', ''],
+    ['Bb', '']
+  ]);
+});
+
+test('[lsm] 和弦升降記號為 ♯／♭ 原生上標（根音與斜線低音），數字仍原生下標，品質字母不變；classic 維持 #／b', async () => {
+  const s = fromTranscription({
+    ...data,
+    notes: [
+      {q: 0, duration: 4, midi: 60},
+      {q: 4, duration: 4, midi: 62},
+      {q: 8, duration: 4, midi: 64},
+      {q: 12, duration: 4, midi: 65}
+    ],
+    chords: [
+      {q: 0, text: 'F#m'},
+      {q: 4, text: 'Bb'},
+      {q: 8, text: 'C#m7/G#'},
+      {q: 12, text: 'Dm'}
+    ]
+  });
+  assert.deepEqual(chordRuns3(await lsmXml(s)), [
+    ['F', ''],
+    ['\u266F', 'super'],
+    ['m', ''],
+    ['B', ''],
+    ['\u266D', 'super'],
+    ['C', ''],
+    ['\u266F', 'super'],
+    ['m', ''],
+    ['7', 'sub'],
+    ['/G', ''],
+    ['\u266F', 'super'],
+    ['Dm', '']
+  ]);
+  const s2 = fromTranscription({...data, chords: [{q: 0, text: 'A7'}, {q: 8, text: 'Bm7'}]});
+  assert.deepEqual(chordRuns3(await lsmXml(s2)), [
+    ['A', ''],
+    ['7', 'sub'],
+    ['Bm', ''],
+    ['7', 'sub']
+  ]);
+  const classic = await lsmXml(s, CLASSIC);
+  assert.doesNotMatch(classic, /superscript/);
+  assert.deepEqual(chordRuns3(classic), [
+    ['F#m', ''],
+    ['Bb', ''],
+    ['C#m', ''],
+    ['7', 'sub'],
+    ['/G#', ''],
+    ['Dm', '']
+  ]);
+});

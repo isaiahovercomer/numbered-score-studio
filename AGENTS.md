@@ -28,7 +28,7 @@
 
 ## 4. 測試
 - **`npm test` 必須全過**（只用 Node 內建模組，不需安裝任何東西）；新行為要補測試，修 bug 要補「修正前會失敗」的回歸測試。
-- 主要測試：`music.test.js`、`studio.test.js`、`worker.test.js`、`word-layout.test.js`（鎖定兩種 Word 版式）、`word-edge.test.js`（高風險邊界）、`wording.test.js`（用字規則）、`golden-docx.test.js`（DOCX 位元組比對）、`score-edit.test.js`、`musicxml.test.js`（MusicXML 匯出）、`word-lyrics-inline.test.js`（歌詞內文整句排法）、`repo-hygiene.test.js`。新增測試檔記得加進 `package.json` 的 `test` 腳本。
+- 主要測試：`music.test.js`、`studio.test.js`、`worker.test.js`、`word-layout.test.js`（鎖定兩種 Word 版式）、`word-edge.test.js`（高風險邊界）、`wording.test.js`（用字規則）、`golden-docx.test.js`（DOCX 位元組比對）、`score-edit.test.js`、`musicxml.test.js`（MusicXML 匯出）、`lyrics-diagnose.test.js`（一字一音診斷）、`word-lyrics-inline.test.js`（歌詞內文整句排法）、`repo-hygiene.test.js`、`line-length.test.js`（行寬 120；舊檔的超長行數只准減少）。新增測試檔記得加進 `package.json` 的 `test` 腳本。
 - **刻意改變排版或用字規則**時，先改測試反映新規格，再 `UPDATE_GOLDEN=1 npm test` 更新 `golden-docx.json`，並在 PR 說明為何輸出改變。
 - 瀏覽器煙霧測試（可選）：`npm install && npm run test:e2e`（手機 390px／桌面 1440px，檢查無水平捲動、主要控制項可見、可匯出 Word／MIDI）。需要本機 Chrome（可用 `CHROME_PATH`）。CI 有獨立的 `e2e` job，不影響 `npm test`。
 - 改 UI 或拆檔時，除了測試，也用 Playwright 實際操作比對行為（重構 PR 的做法）。
@@ -47,7 +47,7 @@
 | `worker.js`、`wrangler.toml` | Cloudflare Worker 後端（AI 讀譜、額度防護） |
 
 - 重構時 `word-export.js` 的公開 API 不變：其他檔案與測試仍從它匯入 `wordBlob`、`PRESETS`、`PAPERS`、`resolveOptions`、`layout`、`parseVerses` 等。
-- 程式碼用 `.prettierrc.json` 的風格（單引號、寬 120）；新檔案請照此排版，不要寫超長單行。
+- 程式碼用 `.prettierrc.json` 的風格（單引號、寬 120）；新檔案請照此排版，不要寫超長單行`line-length.test.js` 會檢查：新檔與已整理的檔案（如 `musicxml.js`）一律不超過 120 字，舊檔列在 `LEGACY`，整理後要把數字調低或移除。
 
 ## 6. 輸出與使用者偏好
 - 輸出：**可編輯的 DOCX**＋**MP3**＋**MIDI**＋**MusicXML**＋**JSON**（儲存樂譜）。Word 由瀏覽器本機產生，不經遠端服務；只有圖片讀譜會送到後端。

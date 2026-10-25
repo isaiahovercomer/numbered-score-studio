@@ -68,9 +68,9 @@ const lineSum = p =>
   +(p.match(/<w:pPr>.*?w:after="(\d+)"/)?.[1] ?? 0);
 // 附錄 A（00-順序與相依.md）在 main 2bfb49d 的雜湊：boxes 與純譜必須逐位元不變。
 const HASH = {
-  'lsm:lyrics2': '78a1613d943f0d0ed5a88fd505b3b3317f9c4746f5271d2c164ee8567f1293d6',
+  'lsm:lyrics2': '076101ca2abac8ee4b8eddaed251139a5abd57367b46c8d67f7d524798523af8',
   'classic:lyrics2': '3b8c59c2687362e3adba1d68ebeff17a8cc7006607b543e27407d8b290910871',
-  'lsm:plain': '07237078e6e818a6a224a71de3dcdf024f074be07ca4b0bace629064728ed635',
+  'lsm:plain': 'fdb47ce68ac3b0b47bd87b6a7c698cff5442ccf96bddfc5c824ae39b3a46a341',
   'classic:plain': 'bea1d5a58fb94f66508655691118ac54a6f169616d9299685be3101e35ac1c14'
 };
 

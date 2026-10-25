@@ -7,7 +7,7 @@ const esc = s =>
     .replace(XML_INVALID, '')
     .replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;'})[c]);
 export function run(text, font, size, color = '000000', sub = false, ascii = font, italic = false) {
-  return `<w:r><w:rPr><w:rFonts w:ascii="${ascii}" w:hAnsi="${ascii}" w:eastAsia="${font}"/>${italic ? '<w:i/>' : ''}<w:color w:val="${color}"/><w:sz w:val="${size * 2}"/>${sub ? '<w:vertAlign w:val="subscript"/>' : ''}</w:rPr><w:t xml:space="preserve">${esc(text)}</w:t></w:r>`;
+  return `<w:r><w:rPr><w:rFonts w:ascii="${ascii}" w:hAnsi="${ascii}" w:eastAsia="${font}"/>${italic ? '<w:i/>' : ''}<w:color w:val="${color}"/><w:sz w:val="${size * 2}"/>${sub ? `<w:vertAlign w:val="${sub === 'super' ? 'superscript' : 'subscript'}"/>` : ''}</w:rPr><w:t xml:space="preserve">${esc(text)}</w:t></w:r>`;
 }
 // 內文歌詞段落：每項一個左定位點（twip，相對左邊界）＋ Tab ＋文字。pPr 子元素須依 OOXML 順序。
 // items = [{pos, text}]（pos 單位 pt，由小到大）；last = 本列最後一節（不加 keepNext、加段後距 after）。
@@ -19,7 +19,8 @@ export function lyricParagraph(items, {last = false, after = 0, font, size, asci
     '<w:autoSpaceDE w:val="0"/><w:autoSpaceDN w:val="0"/><w:snapToGrid w:val="0"/>' +
     `<w:spacing w:before="0" w:after="${last ? after : 0}" w:line="${Math.round(line * 20)}" w:lineRule="exact"/>` +
     '<w:ind w:left="0" w:right="0" w:firstLine="0"/><w:jc w:val="left"/></w:pPr>';
-  return `<w:p>${pPr}${items.map(it => '<w:r><w:tab/></w:r>' + run(it.text, font, size, '000000', false, ascii)).join('')}</w:p>`;
+  const runs = items.map(it => '<w:r><w:tab/></w:r>' + run(it.text, font, size, '000000', false, ascii)).join('');
+  return `<w:p>${pPr}${runs}</w:p>`;
 }
 let shapeId = 0;
 export const resetShapeIds = () => {
@@ -41,9 +42,9 @@ function anchor(x, y, w, h, inner) {
 export function box(text, x, y, w, h, font, size, color = '000000', chord = false, ascii = font) {
   const content = chord
     ? text
-        .split(/(\d+)/)
+        .split(/(\d+|[\u266F\u266D])/) // 和弦數字原生下標；♯／♭（只在 lsm 出現）原生上標
         .filter(Boolean)
-        .map(t => run(t, font, size, color, /^\d+$/.test(t)))
+        .map(t => run(t, font, size, color, /^\d+$/.test(t) || (/^[\u266F\u266D]$/.test(t) && 'super')))
         .join('')
     : run(text, font, size, color, false, ascii);
   return anchor(
