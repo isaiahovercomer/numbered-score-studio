@@ -204,7 +204,7 @@ test('T11 形狀數：inline 移除歌詞與節次方塊', async () => {
   }
 });
 
-test('T12 和弦、音符、連結線、版權行、sectPr 在兩種排法逐字相同', async () => {
+test('T12 和弦、音符、連結線、sectPr 在兩種排法逐字相同', async () => {
   const shapes = xml =>
     [...xml.matchAll(/<w:drawing>.*?<\/w:drawing>/gs)]
       .map(m =>
@@ -213,9 +213,9 @@ test('T12 和弦、音符、連結線、版權行、sectPr 在兩種排法逐字
           .replace(/ name="[^"]*"/g, ' name=""')
           .replace(/ relativeHeight="\d+"/g, ' relativeHeight="0"')
       )
-      // 去掉 boxes 的歌詞與節次方塊（段落定位、歌詞字型）；版權行以頁面定位，保留比對。
+      // 去掉 boxes 的歌詞與節次方塊（段落定位、歌詞字型）。
       .filter(d => !(/relativeFrom="paragraph"/.test(d) && /w:eastAsia="(新細明體|標楷體)"/.test(d)));
-  for (const extra of [{}, {copyright: '© 2026 Test'}, {paper: 'a4'}, {preset: 'classic'}]) {
+  for (const extra of [{}, {paper: 'a4'}, {preset: 'classic'}]) {
     const a = await docXml(exL(), {...extra, lyricLayout: 'boxes'}),
       b = await docXml(exL(), {...extra, lyricLayout: 'inline'});
     assert.deepEqual(shapes(b), shapes(a));

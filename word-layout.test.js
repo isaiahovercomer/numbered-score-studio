@@ -239,37 +239,6 @@ test('[lsm] 和弦仍為 Times New Roman 10 pt 深紅 #9C2323、數字原生下�
   assert.ok(score.length > 0 && score.every(r => r.pt === 14 && !r.sub));
 });
 
-test('[lsm] 末頁版權行：預設不加；指定文字時為相對頁面底部定位、置中、斜體 10 pt，且不新增段落', async () => {
-  assert.doesNotMatch(await lsmXml(), /Copyright|Living Stream/);
-  const text = '© 2026 Living Stream Ministry';
-  const base = await lsmXml();
-  const xml = await lsmXml(makeScore(), {copyright: text});
-  const c = runs2(xml).find(r => r.text === text);
-  assert.deepEqual([c.italic, c.pt, c.ascii], [true, 10, 'New Century Schoolbook']);
-  assert.match(
-    xml,
-    /<wp:positionH relativeFrom="page"><wp:align>center<\/wp:align><\/wp:positionH><wp:positionV relativeFrom="page">/
-  );
-  assert.equal(
-    (xml.match(/<w:p>/g) || []).length - (base.match(/<w:p>/g) || []).length,
-    1,
-    '只多一個文字方塊內的段落，不多出頁面段落'
-  );
-  assert.ok(
-    xml.lastIndexOf('Living Stream') > xml.lastIndexOf('<w:p><w:pPr><w:spacing w:line'),
-    '版權行附在最後一個系統段落'
-  );
-  assert.match(xml, new RegExp(`<wp:posOffset>${Math.round((841.9 - 36.5) * 12700)}<\\/wp:posOffset>`));
-});
-
-test('[lsm] 版權行含 $&、$$、$` 等字元時原樣輸出，不會被當成取代樣式（Bugbot 回歸）', async () => {
-  const text = "A$&B$$C$`D$'E";
-  const base = await lsmXml();
-  const xml = await lsmXml(makeScore(), {copyright: text});
-  assert.ok(xml.includes('A$&amp;B$$C$`D$&apos;E'), '版權文字逐字保留（僅經 XML 跳脫）');
-  assert.equal((xml.match(/<\/w:p>/g) || []).length - (base.match(/<\/w:p>/g) || []).length, 1, '不得多出 </w:p>');
-});
-
 test('[css] 深色「帶走你的作品」面板內的 Word 版式選單有淺色文字與分隔線（Bugbot 回歸）', async () => {
   const fs = await import('node:fs');
   const css = fs.readFileSync(new URL('./style.css', import.meta.url), 'utf8');
@@ -303,7 +272,7 @@ test('resolveOptions：未知版式回到官方預設；非法紙張、節次樣
   assert.equal(resolveOptions({preset: 'classic', paper: 'letter'}).paper, 'letter');
   assert.throws(() => resolveOptions({paper: 'b5'}), /紙張/);
   assert.throws(() => resolveOptions({verseMarks: 'x'}), /節次/);
-  assert.equal(resolveOptions({copyright: '  hi  '}).copyright, 'hi');
+  assert.equal(resolveOptions({copyright: '  hi  '}).copyright, undefined);
 });
 
 test('wordingHints：只提醒、不改寫；官方用字（裏、甚麼、豫、召會、着、祂）', () => {
@@ -315,18 +284,18 @@ test('wordingHints：只提醒、不改寫；官方用字（裏、甚麼、豫�
   );
 });
 
-test('[lsm] 技能參考資料（notationLayout）路徑同樣套用官方標題列、節次與版權行；classic 維持原樣', async () => {
+test('[lsm] 技能參考資料（notationLayout）路徑同樣套用官方標題列與節次；classic 維持原樣', async () => {
   const s = makeScore();
   s.lyrics = '甲乙';
   s.notationLayout = {
     fingerprint: JSON.stringify([s.sections, s.key, s.lyrics]),
     systems: [{raw: '1/2/', note_q: [0, 8], lyrics: [{syllables: ['甲', '乙']}]}]
   };
-  const lsm = await lsmXml(s, {copyright: '© 2026 Living Stream Ministry', ...BOXES});
+  const lsm = await lsmXml(s, BOXES);
+  assert.equal(await lsmXml(s, {copyright: '© 2026 Living Stream Ministry', ...BOXES}), lsm, '原稿版面也不輸出版權行');
   assert.match(lsm, /C大調/);
   assert.match(lsm, /①/);
   assert.doesNotMatch(lsm, /一、/);
-  assert.match(lsm, /Living Stream/);
   assert.match(lsm, /w:line="1100"/); // 參考路徑列高＝一般路徑 +2 pt：(34+2)+19 = 55 pt
   const classic = await lsmXml(s, {...CLASSIC, ...BOXES});
   assert.match(classic, /1=C　4\/4　♩ = 120/);
@@ -411,8 +380,8 @@ test('[lsm] 和弦升降記號為 ♯／♭ 原生上標（根音與斜線低音
   ]);
 });
 
-test('[lsm] Letter 選項保留原紙張、版心寬度與版權行位置', async () => {
-  const xml = await lsmXml(makeScore(), {paper: 'letter', copyright: '© 合成測試'});
+test('[lsm] Letter 選項保留原紙張與版心寬度', async () => {
+  const xml = await lsmXml(makeScore(), {paper: 'letter'});
   assert.match(xml, /<w:pgSz w:w="12240" w:h="15840"\/>/);
   const {options, systems, offset} = layout(makeScore(), {paper: 'letter'});
   assert.equal(options.usable, 547);
@@ -420,5 +389,4 @@ test('[lsm] Letter 選項保留原紙張、版心寬度與版權行位置', asyn
     const last = row.at(-1);
     assert.ok(offset + last.x + last.width <= 547 + 14);
   }
-  assert.ok(xml.includes('<wp:posOffset>' + Math.round((792 - 36.5) * 12700) + '</wp:posOffset>'));
 });

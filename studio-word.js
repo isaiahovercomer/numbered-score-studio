@@ -9,7 +9,6 @@ export function connectWordExport({getScore, status, download}) {
     paper: $('wordPaper').value,
     verseMarks: $('wordMarks').value,
     tempo: $('wordTempo').checked,
-    copyright: $('wordCopyright').value,
     wording: $('wordWording').checked,
     lyricLayout: $('wordLyricLayout').value
   });

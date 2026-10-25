@@ -92,7 +92,7 @@ test('DOCX 輸出位元組與 golden 完全相同（重構不得改變輸出）'
 // A4 改版前的 Letter 位元組；固定舊值，不隨 UPDATE_GOLDEN 更新。
 const OLD_LETTER = {
   'tied lsm': 'ae50d91ee1697ae3e1f8166a0c0f0b488ae771294691d6514f678904e8c19b9d',
-  'tied lsm copyright': 'ccdd95a00d95b10bbd0d4abf4166d5bae7829296449728f75d148e38030c9179',
+  'tied lsm copyright': 'ae50d91ee1697ae3e1f8166a0c0f0b488ae771294691d6514f678904e8c19b9d', // 已不輸出版權行，與 tied lsm 相同
   'long lsm': '5c2396473f8ada0fa4445d8844ecdd60b494a23e34f9b3281fc398fe5fcd2cf4',
   'example lsm': 'fcca5d54499ee19803b9e116fc26fb47638b69f42435b51ee3b7cdeb3a03a919',
   'wording lsm (auto replace on)': '6c168c90bf758af4eb2d3d6e6d79510fbff676c46ec22a7967e88aad7a95665a',

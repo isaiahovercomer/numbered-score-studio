@@ -5,7 +5,7 @@ import {applyWordingToScore, wordingHints} from './wording.js';
 import {PAPERS, resolveOptions} from './word-options.js';
 import {verseMark, keyName, token, parseVerses, chordLabel} from './word-notation.js';
 import {chordTextWidth, staggerChords} from './word-chords.js';
-import {run, box, tie, zipStore, copyrightAnchor, resetShapeIds, lyricParagraph} from './word-docx.js';
+import {run, box, tie, zipStore, resetShapeIds, lyricParagraph} from './word-docx.js';
 // 公開 API 維持不變：其他檔案仍從 word-export.js 匯入這些名稱。
 export {PAPERS, PRESETS, DEFAULT_PRESET, resolveOptions} from './word-options.js';
 export {verseMark, keyName, token, parseVerses, chordLabel} from './word-notation.js';
@@ -217,8 +217,6 @@ export function wordBlob(s0, options) {
       const shapes = rowShapes(row, offset, o, lyricShapes);
       body += `<w:p><w:pPr><w:spacing w:line="${height * 20}" w:lineRule="exact" w:after="100"/><w:keepLines/></w:pPr>${shapes}</w:p>`;
     }
-  // Review status is shown in the site; avoid a trailing paragraph forcing a blank second page.
-  if (o.copyright) body = body.replace(/<\/w:p>$/, () => copyrightAnchor(o.copyright, o) + '</w:p>');
 
   const xml =
     `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
