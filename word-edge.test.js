@@ -193,7 +193,24 @@ const restStart = () => ({
   meter: [4, 4],
   chords: {},
   warnings: [],
-  sections: {verse: [{notes: [[null, 1], [60, 1], [62, 1], [64, 1]]}, {notes: [[65, 2], [67, 2]]}]},
+  sections: {
+    verse: [
+      {
+        notes: [
+          [null, 1],
+          [60, 1],
+          [62, 1],
+          [64, 1]
+        ]
+      },
+      {
+        notes: [
+          [65, 2],
+          [67, 2]
+        ]
+      }
+    ]
+  },
   form: [{section: 'verse'}],
   lyrics: '一、\n甲乙丙丁戊\n\n二、\n己庚辛壬癸'
 });
@@ -227,12 +244,39 @@ const longRest = () => ({
   sections: {
     verse: [...Array(8)]
       .map(() => ({notes: [[null, 4]]}))
-      .concat([{notes: [[60, 1], [62, 1], [64, 1], [65, 1]]}])
+      .concat([
+        {
+          notes: [
+            [60, 1],
+            [62, 1],
+            [64, 1],
+            [65, 1]
+          ]
+        }
+      ])
   },
   lyrics: '一、\n甲乙丙丁\n\n二、\n己庚辛壬'
 });
 const refLongRest = () => {
-  const s = {...longRest(), sections: {verse: [{notes: [[60, 2], [62, 2]]}, {notes: [[64, 2], [65, 2]]}]}};
+  const s = {
+    ...longRest(),
+    sections: {
+      verse: [
+        {
+          notes: [
+            [60, 2],
+            [62, 2]
+          ]
+        },
+        {
+          notes: [
+            [64, 2],
+            [65, 2]
+          ]
+        }
+      ]
+    }
+  };
   s.notationLayout = {
     fingerprint: JSON.stringify([s.sections, s.key, s.lyrics]),
     systems: [
@@ -244,7 +288,11 @@ const refLongRest = () => {
 };
 test('第一列全無歌詞：逐字方塊的節次標記放在全曲第一個有字的音左側（含原稿版面）', async () => {
   const pt = 12700;
-  for (const preset of PRESETS) assert.equal(layout(longRest(), preset).systems[0].some(p => p.lyrics.length), false);
+  for (const preset of PRESETS)
+    assert.equal(
+      layout(longRest(), preset).systems[0].some(p => p.lyrics.length),
+      false
+    );
   for (const [name, score] of [
     ['一般', longRest],
     ['原稿版面', refLongRest]
