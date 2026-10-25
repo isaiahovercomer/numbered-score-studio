@@ -12,6 +12,10 @@ const VIEWPORTS = [{name: 'mobile-390', width: 390, height: 844, isMobile: true,
 const MAIN_CONTROLS = ['#loadExample', '#tabAudio', '#tabImage', '#tabData', '#title', '#key', '#bpm', '#exportWord', '#render', '#midi', '#saveJson'];
 const SHOT_DIR = process.env.E2E_SHOT_DIR;
 
+// 瀏覽器暫存與下載只寫入儲存庫內。
+const TEMP_DIR = new URL('../node_modules/.e2e-tmp/', import.meta.url).pathname;
+fs.mkdirSync(TEMP_DIR, {recursive: true});
+process.env.TMPDIR = TEMP_DIR;
 const launch = () => chromium.launch(process.env.CHROME_PATH ? {executablePath: process.env.CHROME_PATH} : {channel: 'chrome'});
 const noHorizontalScroll = page => page.evaluate(() => ({scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth, inner: window.innerWidth}));
 
@@ -63,10 +67,17 @@ for (const vp of VIEWPORTS) {
       });
       assert.notEqual(contrast.text, contrast.bg, 'Word 版式選單文字與面板背景同色');
 
+      assert.equal(await page.locator('#wordPaper').inputValue(), 'a4');
       // 匯出 Word（DOCX 為 ZIP：開頭 PK）與 MIDI（開頭 MThd）
       const [docx] = await Promise.all([page.waitForEvent('download'), page.click('#exportWord')]);
-      assert.match(docx.suggestedFilename(), /\.docx$/);
+      assert.match(docx.suggestedFilename(), /_A4\.docx$/);
       assert.equal(fs.readFileSync(await docx.path()).subarray(0, 2).toString('latin1'), 'PK');
+      await page.locator('.word-options summary').click();
+      await page.selectOption('#wordPaper', 'letter');
+      const [letter] = await Promise.all([page.waitForEvent('download'), page.click('#exportWord')]);
+      assert.match(letter.suggestedFilename(), /_Letter\.docx$/);
+      w = await noHorizontalScroll(page);
+      assert.ok(w.scroll <= w.client, '切換 Letter 後不得水平捲動');
       const [midi] = await Promise.all([page.waitForEvent('download'), page.click('#midi')]);
       assert.match(midi.suggestedFilename(), /\.mid$/);
       assert.equal(fs.readFileSync(await midi.path()).subarray(0, 4).toString('latin1'), 'MThd');

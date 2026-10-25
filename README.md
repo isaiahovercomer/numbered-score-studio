@@ -48,7 +48,10 @@ worker.js 是後端原始碼，wrangler.toml 包含環境變數與 QUOTA Durable
 
 ## 測試與 CI
 
-`npm test` 另含 `wording.test.js`（官方用字規則的資料一致性、誤改防護、只改輸出不改原稿、逐字對位不變）與 `word-layout.test.js`（鎖定兩種 Word 版式：原版式 classic 的 A4、標楷體 22pt／01SMN 14pt／歌詞 13.5pt，以及預設的水流職事站官方版式 lsm 的 Letter、32.5 pt 邊界、①②③ 節次、調號左拍號右、版權行；兩者共通的深紅 #9C2323 和弦與原生下標、DOCX 封包完整性）與 `repo-hygiene.test.js`（確認儲存庫沒有字型、私人音檔、歌詞、金鑰，`.gitignore` 與 config.json 符合規範）。`.github/workflows/test.yml` 會在每個 pull request 與推送到 main 時自動執行 `npm test`；工作流程不使用任何 secret。
+`npm test` 另含 `wording.test.js`（官方用字規則的資料一致性、誤改防護、只改輸出不改原稿、逐字對位不變）與 `word-layout.test.js`（鎖定兩種 Word 版式：原版式 classic 的
+A4、標楷體 22pt／01SMN 14pt／歌詞 13.5pt，以及預設的水流職事站官方版式 lsm 的 A4（Letter 可選）、32.5 pt 邊界、①②③ 節次、調號左拍號右、版權行；兩者共通的深紅 #9C2323
+和弦與原生下標、DOCX 封包完整性）與 `repo-hygiene.test.js`（確認儲存庫沒有字型、私人音檔、歌詞、金鑰，`.gitignore` 與 config.json
+符合規範）。`.github/workflows/test.yml` 會在每個 pull request 與推送到 main 時自動執行 `npm test`；工作流程不使用任何 secret。
 
 ### 更多測試與開發規則
 
@@ -56,7 +59,9 @@ worker.js 是後端原始碼，wrangler.toml 包含環境變數與 QUOTA Durable
 
 ## Word 版式（水流職事站官方 ／ 原版式）
 
-匯出 Word 前可在「Word 版式」選單選擇：預設為水流職事站官方標語歌版式（US Letter、32.5 pt 邊界、明體、①②③ 節次、左「D大調」右「4/4」、不顯示速度、可選末頁版權行）；也可切回原版式（A4、標楷體、一、二、三、），或個別覆寫紙張、節次樣式、是否顯示速度。完整對照見 `NOTATION_RULES.md`。程式介面：`wordBlob(score, {preset, paper, verseMarks, tempo, copyright, wording})`。
+匯出 Word 前可在「Word 版式」選單選擇：預設為水流職事站官方標語歌版式（A4 預設、Letter 可選、32.5 pt 邊界、明體、①②③
+節次、左「D大調」右「4/4」、不顯示速度、可選末頁版權行）；也可切回原版式（A4、標楷體、一、二、三、），或個別覆寫紙張、節次樣式、是否顯示速度。官方實測紙張為 US Letter；要完全依官方紙張請選 Letter。完整對照見
+`NOTATION_RULES.md`。程式介面：`wordBlob(score, {preset, paper, verseMarks, tempo, copyright, wording})`。
 
 ### 官方用字（匯出時自動套用）
 

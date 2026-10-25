@@ -88,3 +88,23 @@ test('DOCX 輸出位元組與 golden 完全相同（重構不得改變輸出）'
   assert.deepEqual(Object.keys(actual), Object.keys(golden), '情境清單與 golden 不一致；刻意變更請用 UPDATE_GOLDEN=1 更新');
   for (const name of Object.keys(golden)) assert.equal(actual[name], golden[name], `「${name}」的輸出位元組改變了`);
 });
+
+// A4 改版前的 Letter 位元組；固定舊值，不隨 UPDATE_GOLDEN 更新。
+const OLD_LETTER = {
+  'tied lsm': '1a9dcb61faf105fa51b5179713d33e81ce7b799712fe0b679693c671c183848f',
+  'tied lsm copyright': 'ed6040ca9ba2c065cc6bc7f5b238cd344dea70b278a5b48dac8dfcface78c200',
+  'long lsm': 'ed3101de4fe69d05c58427d6b12611154645f394b7271f66543091be50ad41bd',
+  'example lsm': '5cc0b1275de609c321463b12df061cec14683cf1e28220bcbdadf7bf71d1237b',
+  'wording lsm (auto replace on)': 'c96d7960c2a0fcbbfb2091a715d6393f5fe650cb179baf388237bd9f7527c669',
+  'wording lsm (auto replace off)': '796d945d1c84c09d4714723936f17994c7f336d4a037ba3040c4dbbc211eb279',
+  'reference lsm': 'cd90f5e5f248a2761a0a90b082aaa398a3799cc68980b1399bdb1df98c1ce588',
+  'no lyrics lsm': '34d5da6efcee056846df947c062864dbc94dcb47d4b0d7eb6eb330a46ac67058'
+};
+
+test('lsm 指定 Letter 的八種情境保持改版前輸出', async () => {
+  for (const [name, expected] of Object.entries(OLD_LETTER)) {
+    const [score, options] = SCENARIOS[name]();
+    const bytes = Buffer.from(await wordBlob(score, {...options, paper: 'letter'}).arrayBuffer());
+    assert.equal(crypto.createHash('sha256').update(bytes).digest('hex'), expected, name);
+  }
+});
