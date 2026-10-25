@@ -122,6 +122,8 @@ export function wordBlob(s0, options) {
     for (const [ri, row] of systems.entries()) {
       const height = o.rowBase + verses.length * 19;
       let shapes = '';
+      // 節次標記只在第一列，放在第一個有字的音旁邊（曲子以休止符開頭時不會消失；與內文整句一致）。
+      const markAt = ri === 0 ? row.findIndex(p => p.lyrics.length) : -1;
       for (const [i, p] of row.entries()) {
         const x = offset + p.x;
         shapes += box(p.text, x, 12, Math.max(p.width, advance(p.text)) + 2, 25, '01SMN', 14);
@@ -139,7 +141,7 @@ export function wordBlob(s0, options) {
             false,
             o.textAscii
           );
-          if (ri === 0 && i === 0) shapes += markBox(vi, x, 38 + vi * 19, o);
+          if (i === markAt) shapes += markBox(vi, x, 38 + vi * 19, o);
         }
         for (const c of p.chords) {
           const cx = x + 7 + ((c.q - p.q) / p.duration) * p.width,

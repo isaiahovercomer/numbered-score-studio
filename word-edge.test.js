@@ -184,3 +184,38 @@ test('chordLabel：symbol 只換根音與斜線低音的 #／b，品質字母不
   }
   assert.equal(chordLabel('F#m'), 'F#m');
 });
+
+// 回歸：曲子以休止符開頭時，逐字方塊（boxes）的節次標記不可消失；比照內文整句，放在第一個有字的音左側。
+const restStart = () => ({
+  title: 't',
+  key: 'C',
+  bpm: 90,
+  meter: [4, 4],
+  chords: {},
+  warnings: [],
+  sections: {verse: [{notes: [[null, 1], [60, 1], [62, 1], [64, 1]]}, {notes: [[65, 2], [67, 2]]}]},
+  form: [{section: 'verse'}],
+  lyrics: '一、\n甲乙丙丁戊\n\n二、\n己庚辛壬癸'
+});
+// 每個文字方塊的水平位置（EMU）與文字。
+const shapesAt = xml =>
+  [...xml.matchAll(/<wp:positionH[^>]*><wp:posOffset>(-?\d+)<\/wp:posOffset>.*?<\/wp:anchor>/gs)].map(m => ({
+    x: Number(m[1]),
+    text: texts(m[0]).join('')
+  }));
+test('休止符開頭：逐字方塊的節次標記仍出現一次，且緊貼第一個有字的音左側（circled 16 pt、中文 32 pt）', async () => {
+  const pt = 12700;
+  for (const preset of PRESETS)
+    for (const [verseMarks, marks, gap] of [
+      ['circled', ['①', '②'], 16],
+      ['chinese', ['一、', '二、'], 32]
+    ]) {
+      const all = shapesAt(await docXml(restStart(), {...preset, verseMarks}));
+      for (const [vi, first] of ['甲', '己'].entries()) {
+        const lyric = all.filter(s => s.text === first);
+        const mark = all.filter(s => s.text === marks[vi]);
+        assert.equal(mark.length, 1, `${preset.preset}/${verseMarks}：節次「${marks[vi]}」應出現一次`);
+        assert.equal(mark[0].x, lyric[0].x - gap * pt, `${preset.preset}/${verseMarks}：節次位置`);
+      }
+    }
+});
