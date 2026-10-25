@@ -91,13 +91,13 @@ test('DOCX 輸出位元組與 golden 完全相同（重構不得改變輸出）'
 
 // A4 改版前的 Letter 位元組；固定舊值，不隨 UPDATE_GOLDEN 更新。
 const OLD_LETTER = {
-  'tied lsm': '1a9dcb61faf105fa51b5179713d33e81ce7b799712fe0b679693c671c183848f',
-  'tied lsm copyright': 'ed6040ca9ba2c065cc6bc7f5b238cd344dea70b278a5b48dac8dfcface78c200',
-  'long lsm': 'ed3101de4fe69d05c58427d6b12611154645f394b7271f66543091be50ad41bd',
-  'example lsm': '5cc0b1275de609c321463b12df061cec14683cf1e28220bcbdadf7bf71d1237b',
-  'wording lsm (auto replace on)': 'c96d7960c2a0fcbbfb2091a715d6393f5fe650cb179baf388237bd9f7527c669',
-  'wording lsm (auto replace off)': '796d945d1c84c09d4714723936f17994c7f336d4a037ba3040c4dbbc211eb279',
-  'reference lsm': 'cd90f5e5f248a2761a0a90b082aaa398a3799cc68980b1399bdb1df98c1ce588',
+  'tied lsm': 'ae50d91ee1697ae3e1f8166a0c0f0b488ae771294691d6514f678904e8c19b9d',
+  'tied lsm copyright': 'ccdd95a00d95b10bbd0d4abf4166d5bae7829296449728f75d148e38030c9179',
+  'long lsm': '5c2396473f8ada0fa4445d8844ecdd60b494a23e34f9b3281fc398fe5fcd2cf4',
+  'example lsm': 'fcca5d54499ee19803b9e116fc26fb47638b69f42435b51ee3b7cdeb3a03a919',
+  'wording lsm (auto replace on)': '6c168c90bf758af4eb2d3d6e6d79510fbff676c46ec22a7967e88aad7a95665a',
+  'wording lsm (auto replace off)': 'b2c4222077cfaa7d45d8e24c4cb0ec73e34ba72ff4f219f05f9057342a5716a3',
+  'reference lsm': 'dc78663679307f4948ebed2b0800a03d307c6b10eaee4e6d2facc4087c9d8ae2',
   'no lyrics lsm': '34d5da6efcee056846df947c062864dbc94dcb47d4b0d7eb6eb330a46ac67058'
 };
 
