@@ -6,7 +6,7 @@
 export const PAPERS = {letter: {w: 12240, h: 15840, name: 'Letter'}, a4: {w: 11906, h: 16838, name: 'A4'}};
 export const PRESETS = {
   lsm: {
-    paper: 'letter',
+    paper: 'a4',
     verseMarks: 'circled',
     tempo: false,
     keyStyle: 'lsm',

@@ -96,7 +96,7 @@ test('T2 不合法的歌詞排法', () => {
 });
 
 test('T3 boxes 與 main 逐位元相同（classic 只差歌詞英數字型改 Times New Roman）', async () => {
-  assert.equal(sha(await bytes(exL(), {lyricLayout: 'boxes'})), HASH['lsm:lyrics2']);
+  assert.equal(sha(await bytes(exL(), {paper: 'letter', lyricLayout: 'boxes'})), HASH['lsm:lyrics2']);
   const xml = await docXml(exL(), {preset: 'classic', lyricLayout: 'boxes'});
   const tnr = 'w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:eastAsia="標楷體"';
   assert.equal((xml.match(new RegExp(tnr, 'g')) || []).length, 152);
@@ -107,13 +107,13 @@ test('T3 boxes 與 main 逐位元相同（classic 只差歌詞英數字型改 Ti
 });
 
 test('T4 純譜（無歌詞）在 inline 下逐位元不變', async () => {
-  assert.equal(sha(await bytes(ex(), {lyricLayout: 'inline'})), HASH['lsm:plain']);
+  assert.equal(sha(await bytes(ex(), {paper: 'letter', lyricLayout: 'inline'})), HASH['lsm:plain']);
   assert.equal(sha(await bytes(ex(), {preset: 'classic', lyricLayout: 'inline'})), HASH['classic:plain']);
 });
 
 test('T5 定位點（lsm）', async () => {
-  assert.equal(layout(edge(), {lyricLayout: 'inline'}).offset, 195.5);
-  const lp = topParas(await docXml(edge(), {lyricLayout: 'inline'})).filter(isLyric);
+  assert.equal(layout(edge(), {paper: 'letter', lyricLayout: 'inline'}).offset, 195.5);
+  const lp = topParas(await docXml(edge(), {paper: 'letter', lyricLayout: 'inline'})).filter(isLyric);
   assert.deepEqual(tabsOf(lp[0]), [3970, 4290, 5230, 6690, 7070]);
   assert.deepEqual(textsOf(lp[0]), ['①', '甲', '乙', 'a', 'b']);
   assert.deepEqual(tabsOf(lp[1]), [3970, 4290, 5230, 6690, 7070]);
@@ -247,7 +247,7 @@ test('T14 一行超過 64 個定位點時明確報錯', () => {
 });
 
 test('T15 首音休止：節次標記在第一個有字的音左側', async () => {
-  const l = topParas(await docXml(edge(), {lyricLayout: 'inline'})).filter(isLyric)[0];
+  const l = topParas(await docXml(edge(), {paper: 'letter', lyricLayout: 'inline'})).filter(isLyric)[0];
   const c = topParas(await docXml(edge(), {preset: 'classic', lyricLayout: 'inline'})).filter(isLyric)[0];
   assert.equal(tabsOf(l)[0], 3970);
   assert.equal(tabsOf(l)[1] - tabsOf(l)[0], 320);

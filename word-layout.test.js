@@ -141,11 +141,13 @@ function runs2(xml) {
 }
 const lsmXml = async (s = makeScore(), opts) => readZip(await docBytes(s, opts))['word/document.xml'];
 
-test('[lsm] 預設即官方版式：US Letter 612×792、直式、邊界 32.5 pt（左右）、無頁首頁尾與頁碼', async () => {
+test('[lsm] 預設 A4 595.3×841.9、直式、邊界 32.5 pt（左右）、無頁首頁尾與頁碼', async () => {
   const files = readZip(await docBytes(makeScore()));
   const xml = files['word/document.xml'];
-  assert.match(xml, /<w:pgSz w:w="12240" w:h="15840"\/>/);
+  assert.match(xml, /<w:pgSz w:w="11906" w:h="16838"\/>/);
   assert.doesNotMatch(xml, /w:orient="landscape"/);
+  assert.match(xml, /w:top="1140"/);
+  assert.match(xml, /w:bottom="650"/);
   assert.match(xml, /w:left="650"/);
   assert.match(xml, /w:right="650"/); // 650 twips = 32.5 pt
   assert.match(xml, /w:header="0" w:footer="0"/);
@@ -160,6 +162,8 @@ test('[lsm] 預設即官方版式：US Letter 612×792、直式、邊界 32.5 pt
 test('[lsm] 可選 A4（paper:"a4"），邊界仍為 32.5 pt', async () => {
   const xml = await lsmXml(makeScore(), {paper: 'a4'});
   assert.match(xml, /<w:pgSz w:w="11906" w:h="16838"\/>/);
+  assert.match(xml, /w:top="1140"/);
+  assert.match(xml, /w:bottom="650"/);
   assert.match(xml, /w:left="650"/);
 });
 
@@ -255,7 +259,7 @@ test('[lsm] 末頁版權行：預設不加；指定文字時為相對頁面底�
     xml.lastIndexOf('Living Stream') > xml.lastIndexOf('<w:p><w:pPr><w:spacing w:line'),
     '版權行附在最後一個系統段落'
   );
-  assert.match(xml, new RegExp(`<wp:posOffset>${Math.round((792 - 36.5) * 12700)}<\\/wp:posOffset>`));
+  assert.match(xml, new RegExp(`<wp:posOffset>${Math.round((841.9 - 36.5) * 12700)}<\\/wp:posOffset>`));
 });
 
 test('[lsm] 版權行含 $&、$$、$` 等字元時原樣輸出，不會被當成取代樣式（Bugbot 回歸）', async () => {
@@ -282,17 +286,19 @@ test('[lsm] 每行系統間距：單節歌詞≈58 pt（官方 57～58 pt）；�
   assert.match(await lsmXml(makeScore(), {...CLASSIC, ...BOXES}), /w:line="1640"/); // 原版式不變：44+2×19=82 pt
 });
 
-test('[lsm] 排版寬度不超出 Letter 可用寬度（612−65＝547 pt）', () => {
+test('[lsm] 排版寬度不超出 A4 可用寬度（530.3 pt）', () => {
   const {systems, offset, options} = layout(makeScore());
-  assert.equal(options.usable, 547);
+  assert.equal(options.usable, 530.3);
   for (const row of systems) {
     const l = row.at(-1);
-    assert.ok(offset + l.x + l.width <= 547 + 14);
+    assert.ok(offset + l.x + l.width <= 530.3 + 14);
   }
 });
 
 test('resolveOptions：未知版式回到官方預設；非法紙張、節次樣式會明確報錯', () => {
-  assert.equal(resolveOptions({preset: 'x'}).paper, 'letter');
+  assert.equal(resolveOptions({}).paper, 'a4');
+  assert.equal(resolveOptions({paper: 'letter'}).paper, 'letter');
+  assert.equal(resolveOptions({preset: 'x'}).paper, 'a4');
   assert.equal(resolveOptions({preset: 'classic'}).paper, 'a4');
   assert.equal(resolveOptions({preset: 'classic', paper: 'letter'}).paper, 'letter');
   assert.throws(() => resolveOptions({paper: 'b5'}), /紙張/);
@@ -403,4 +409,16 @@ test('[lsm] 和弦升降記號為 ♯／♭ 原生上標（根音與斜線低音
     ['/G#', ''],
     ['Dm', '']
   ]);
+});
+
+test('[lsm] Letter 選項保留原紙張、版心寬度與版權行位置', async () => {
+  const xml = await lsmXml(makeScore(), {paper: 'letter', copyright: '© 合成測試'});
+  assert.match(xml, /<w:pgSz w:w="12240" w:h="15840"\/>/);
+  const {options, systems, offset} = layout(makeScore(), {paper: 'letter'});
+  assert.equal(options.usable, 547);
+  for (const row of systems) {
+    const last = row.at(-1);
+    assert.ok(offset + last.x + last.width <= 547 + 14);
+  }
+  assert.ok(xml.includes('<wp:posOffset>' + Math.round((792 - 36.5) * 12700) + '</wp:posOffset>'));
 });
