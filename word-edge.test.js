@@ -219,3 +219,48 @@ test('休止符開頭：逐字方塊的節次標記仍出現一次，且緊貼�
       }
     }
 });
+
+// 回歸（Isaiah：節次標記永遠不可消失）：整個第一列都是休止符（前奏很長）時，標記放在全曲第一個有字的音左側；
+// 原稿版面（notationLayout）第一列沒有歌詞時，標記放在該節第一個有字的列。只有該節完全沒有歌詞才省略。
+const longRest = () => ({
+  ...restStart(),
+  sections: {
+    verse: [...Array(8)]
+      .map(() => ({notes: [[null, 4]]}))
+      .concat([{notes: [[60, 1], [62, 1], [64, 1], [65, 1]]}])
+  },
+  lyrics: '一、\n甲乙丙丁\n\n二、\n己庚辛壬'
+});
+const refLongRest = () => {
+  const s = {...longRest(), sections: {verse: [{notes: [[60, 2], [62, 2]]}, {notes: [[64, 2], [65, 2]]}]}};
+  s.notationLayout = {
+    fingerprint: JSON.stringify([s.sections, s.key, s.lyrics]),
+    systems: [
+      {raw: '1/2/', note_q: [0, 8], lyrics: []},
+      {raw: '1/2/3/4/', note_q: [16, 20, 24, 28], lyrics: [{syllables: [...'甲乙丙丁']}, {syllables: [...'己庚辛壬']}]}
+    ]
+  };
+  return s;
+};
+test('第一列全無歌詞：逐字方塊的節次標記放在全曲第一個有字的音左側（含原稿版面）', async () => {
+  const pt = 12700;
+  for (const preset of PRESETS) assert.equal(layout(longRest(), preset).systems[0].some(p => p.lyrics.length), false);
+  for (const [name, score] of [
+    ['一般', longRest],
+    ['原稿版面', refLongRest]
+  ])
+    for (const preset of PRESETS)
+      for (const [verseMarks, marks, gap] of [
+        ['circled', ['①', '②'], 16],
+        ['chinese', ['一、', '二、'], 32]
+      ]) {
+        const all = shapesAt(await docXml(score(), {...preset, verseMarks, lyricLayout: 'boxes'}));
+        for (const [vi, first] of ['甲', '己'].entries()) {
+          const lyric = all.filter(s => s.text === first);
+          const mark = all.filter(s => s.text === marks[vi]);
+          const at = `${name}/${preset.preset}/${verseMarks}`;
+          assert.equal(mark.length, 1, `${at}：節次「${marks[vi]}」應出現一次`);
+          assert.equal(mark[0].x, lyric[0].x - gap * pt, `${at}：節次位置`);
+        }
+      }
+});

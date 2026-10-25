@@ -117,13 +117,15 @@ export function wordBlob(s0, options) {
   let body = headerXml(s, o, false);
   let tieStart = null;
   const reference = referenceBody(s, o);
+  // 節次標記放在全曲第一個有字的列（通常是第一列；前奏整列休止時往後移），永遠不會消失。
+  const markRow = systems.findIndex(row => row.some(p => p.lyrics.length));
   if (reference) body = reference;
   else
     for (const [ri, row] of systems.entries()) {
       const height = o.rowBase + verses.length * 19;
       let shapes = '';
-      // 節次標記只在第一列，放在第一個有字的音旁邊（曲子以休止符開頭時不會消失；與內文整句一致）。
-      const markAt = ri === 0 ? row.findIndex(p => p.lyrics.length) : -1;
+      // 節次標記放在第一個有字的音旁邊（曲子以休止符開頭時不會消失；與內文整句一致）。
+      const markAt = ri === markRow ? row.findIndex(p => p.lyrics.length) : -1;
       for (const [i, p] of row.entries()) {
         const x = offset + p.x;
         shapes += box(p.text, x, 12, Math.max(p.width, advance(p.text)) + 2, 25, '01SMN', 14);
@@ -207,6 +209,8 @@ function referenceBody(s, o) {
     off = (o.usable - maxWidth - 32) / 2 + 32;
   let body = headerXml(s, o, true);
   const {changes} = writtenEvents(s);
+  // 每節的節次標記放在該節第一個有字的列；該節完全沒有歌詞才省略。
+  const markRow = vi => systems.findIndex(r => r.lyrics[vi]?.syllables.length);
   for (const [ri, r] of systems.entries()) {
     const positions = metrics(r.raw),
       attacks = positions.filter(p => p.attack);
@@ -227,7 +231,7 @@ function referenceBody(s, o) {
           o.textAscii
         );
       }
-      if (ri === 0) shapes += markBox(vi, off, 40 + vi * 19, o);
+      if (ri === markRow(vi)) shapes += markBox(vi, off, 40 + vi * 19, o);
     }
     const end = systems[ri + 1]?.note_q[0] ?? Infinity;
     for (const c of changes.filter(c => c.q >= r.note_q[0] && c.q < end)) {
