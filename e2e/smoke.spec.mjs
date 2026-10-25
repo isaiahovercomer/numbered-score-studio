@@ -12,10 +12,6 @@ const VIEWPORTS = [{name: 'mobile-390', width: 390, height: 844, isMobile: true,
 const MAIN_CONTROLS = ['#loadExample', '#tabAudio', '#tabImage', '#tabData', '#title', '#key', '#bpm', '#exportWord', '#render', '#midi', '#saveJson'];
 const SHOT_DIR = process.env.E2E_SHOT_DIR;
 
-// 瀏覽器暫存與下載只寫入儲存庫內。
-const TEMP_DIR = new URL('../node_modules/.e2e-tmp/', import.meta.url).pathname;
-fs.mkdirSync(TEMP_DIR, {recursive: true});
-process.env.TMPDIR = TEMP_DIR;
 const launch = () => chromium.launch(process.env.CHROME_PATH ? {executablePath: process.env.CHROME_PATH} : {channel: 'chrome'});
 const noHorizontalScroll = page => page.evaluate(() => ({scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth, inner: window.innerWidth}));
 
