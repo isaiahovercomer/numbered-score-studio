@@ -1,5 +1,5 @@
 // Word 匯出面板：版式選項、說明文字、匯出與官方用字回報。
-import {wordBlob, PRESETS, PAPERS, wordingHints, wordingChanges, describeChanges} from './word-export.js';
+import {wordBlob, layout, PRESETS, PAPERS, wordingHints, wordingChanges, describeChanges} from './word-export.js';
 import {$} from './dom.js';
 import {explainLyricError} from './lyrics-diagnose.js';
 
@@ -35,6 +35,11 @@ export function connectWordExport({getScore, status, download}) {
     try {
       s = getScore();
       const o = wordOptions();
+      const warnings = layout(s, o).warnings;
+      wordHint();
+      for (const warning of warnings) {
+        $('wordHint').append(document.createElement('br'), document.createTextNode(warning));
+      }
       download(wordBlob(s, o), (s.title || '詞譜') + '_' + PAPERS[o.paper].name + '.docx');
       const text = (s.title || '') + '\n\n' + (s.lyrics || ''),
         changes = wordingChanges(s, o),

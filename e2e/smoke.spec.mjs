@@ -182,3 +182,45 @@ test('[mobile-390] Word 歌詞排法：內文整句', async () => {
     await context.close();
   }
 });
+
+// 和弦過密：只使用合成譜，直接連接匯出面板以驗證提示與匯出回呼。
+test('[mobile-390] 和弦過密顯示行號、仍可匯出，下一次正常匯出清除警告', async () => {
+  const context = await browser.newContext({viewport: {width: 390, height: 844}, isMobile: true, hasTouch: true});
+  await context.route(url => !url.href.startsWith(srv.url), route => route.abort());
+  const page = await context.newPage();
+  try {
+    await page.goto(srv.url);
+    await page.evaluate(async () => {
+      const {connectWordExport} = await import('./studio-word.js');
+      const {fromTranscription} = await import('./score-bridge.js');
+      const s = fromTranscription({
+        title: '合成過密和弦', target_key: 'C',
+        notes: [{q: 0, duration: 16, midi: 60}],
+        chords: Array.from({length: 20}, (_, i) => ({q: i * 0.8, text: 'Ebsus4/Bb'}))
+      });
+      window.chordTest = {s, downloads: 0};
+      connectWordExport({
+        getScore: () => window.chordTest.s,
+        status: text => { document.querySelector('#status').textContent = text; },
+        download: blob => {
+          if (blob.size > 0) window.chordTest.downloads++;
+        }
+      });
+    });
+    await page.click('#exportWord');
+    assert.match(await page.textContent('#wordHint'), /和弦過密：第 1 行/);
+    assert.equal(await page.evaluate(() => window.chordTest.downloads), 1);
+    let w = await noHorizontalScroll(page);
+    assert.ok(w.scroll <= w.client, '和弦警告不得造成水平捲動');
+    await page.evaluate(() => {
+      window.chordTest.s.sections.verse[0].chordChanges = [{beat: 0, text: 'C'}];
+    });
+    await page.click('#exportWord');
+    assert.doesNotMatch(await page.textContent('#wordHint'), /和弦過密/);
+    assert.equal(await page.evaluate(() => window.chordTest.downloads), 2);
+    w = await noHorizontalScroll(page);
+    assert.ok(w.scroll <= w.client);
+  } finally {
+    await context.close();
+  }
+});
