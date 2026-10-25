@@ -261,8 +261,6 @@ function referenceRows(s, o) {
   const maxWidth = Math.max(...systems.map(r => advance(r.raw))),
     off = (o.usable - maxWidth - 32) / 2 + 32;
   const {changes} = writtenEvents(s);
-  // 每節的節次標記放在該節第一個有字的列；該節完全沒有歌詞才省略。
-  const markRow = vi => systems.findIndex(r => r.lyrics[vi]?.syllables.length);
   for (const [ri, r] of systems.entries()) {
     const positions = metrics(r.raw);
     r.positions = positions;
@@ -289,6 +287,8 @@ function referenceBody(s, o) {
   const ref = referenceRows(s, o);
   if (!ref) return null;
   const {systems, off} = ref;
+  // 每節的節次標記放在該節第一個有字的列；該節完全沒有歌詞才省略。
+  const markRow = vi => systems.findIndex(r => r.lyrics[vi]?.syllables.length);
   let body = headerXml(s, o, true);
   for (const [ri, r] of systems.entries()) {
     const positions = r.positions,

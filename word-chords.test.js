@@ -20,8 +20,8 @@ const score = (reference = false) => fromTranscription({
     .map((text, i) => ({q: i * (reference ? 8 : 4), text})),
   ...(reference ? {systems: [{raw: '12', note_q: [0, 8], lyrics: []}]} : {})
 });
-async function chordBoxes(s, preset) {
-  const xml = readZip(new Uint8Array(await wordBlob(s, {preset}).arrayBuffer()))['word/document.xml'];
+async function chordBoxes(s, preset, extra = {}) {
+  const xml = readZip(new Uint8Array(await wordBlob(s, {preset, ...extra}).arrayBuffer()))['word/document.xml'];
   return [...xml.matchAll(/<wp:anchor\b[^]*?<\/wp:anchor>/g)].map(m => m[0])
     .filter(a => a.includes('w:val="9C2323"'))
     .map(a => {
@@ -47,6 +47,14 @@ for (const preset of ['lsm', 'classic']) {
       ['C', 'Gm7/Bb', 'Bbmaj7/F', 'Ebsus4/Bb'].map(c => chordLabel(c, preset === 'lsm' ? 'symbol' : 'ascii')));
     separated(boxes);
   });
+  for (const lyricLayout of ['inline', 'boxes'])
+    test(`C5 ${preset}／${lyricLayout}：有歌詞時四個一拍和弦也不重疊`, async () => {
+      const s = score();
+      s.lyrics = '甲';
+      const boxes = await chordBoxes(s, preset, {lyricLayout});
+      assert.equal(boxes.length, 4);
+      separated(boxes);
+    });
   test(`C6 ${preset}：原稿相鄰長和弦不重疊`, async () => {
     const boxes = await chordBoxes(score(true), preset);
     assert.equal(boxes.length, 2);
