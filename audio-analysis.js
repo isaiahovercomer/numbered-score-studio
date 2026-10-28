@@ -1,3 +1,14 @@
+export const AUDIO_LIMITS = {seconds: 600, bytes: 120 * 1024 * 1024};
+export function audioLimitError({bytes, seconds}) {
+ if (bytes > AUDIO_LIMITS.bytes) {
+  return `檔案超過 ${AUDIO_LIMITS.bytes / 1024 / 1024} MB，請剪短錄音，或改用 MP3／M4A。`;
+ }
+ if (seconds > AUDIO_LIMITS.seconds) {
+  const rounded = Math.ceil(seconds), minutes = Math.floor(rounded / 60), rest = rounded % 60;
+  return `錄音超過 ${AUDIO_LIMITS.seconds / 60} 分鐘（目前 ${minutes} 分 ${rest} 秒），請剪短錄音後再試。`;
+ }
+ return '';
+}
 // Local experimental monophonic pitch tracker, not Chordino or a separation model.
 const median=a=>{const s=[...a].sort((a,b)=>a-b);return s[Math.floor(s.length/2)]||0;};
 export function detectPitch(y,start,size,sr){let energy=0,mean=0;for(let i=0;i<size;i++)mean+=y[start+i]||0;mean/=size;for(let i=0;i<size;i++)energy+=((y[start+i]||0)-mean)**2;
@@ -13,7 +24,8 @@ export function detectPitch(y,start,size,sr){let energy=0,mean=0;for(let i=0;i<s
  return {midi:midi>=36&&midi<=90?midi:null,confidence:best,rms};
 }
 export function analyzeMelody(samples,sr,{bpm=0,pickup=0,key='C',title='旋律校對稿'}={},progress=()=>{}){
- if(samples.length/sr>180)throw Error('請使用 3 分鐘以內的單音旋律。');
+ const limitError = audioLimitError({seconds: samples.length / sr});
+ if (limitError) throw Error(limitError);
  const hop=Math.round(sr*.02),size=Math.round(sr*.096),frames=[];
  for(let start=0;start+size<=samples.length;start+=hop){frames.push({...detectPitch(samples,start,size,sr),time:(start+size/2)/sr});if(frames.length%100===0)progress(start/samples.length*.65);}
  for(let i=2;i<frames.length-2;i++){const p=frames.slice(i-2,i+3).map(x=>x.midi).filter(x=>x!==null);if(p.length>=3)frames[i].smooth=median(p);}
@@ -46,6 +58,8 @@ export function analyzeMelody(samples,sr,{bpm=0,pickup=0,key='C',title='旋律�
 }
 // Chroma-template estimate from audio, distinct from melody harmonization.
 export function estimateChords(samples,sr,bpm=120,progress=()=>{}){
+ const limitError = audioLimitError({seconds: samples.length / sr});
+ if (limitError) throw Error(limitError);
  const hop=Math.round(sr*.25),size=Math.round(sr*.12),out=[];const masks={major:[0,4,7],minor:[0,3,7],seventh:[0,4,7,10]};
  for(let offset=0;offset<samples.length;offset+=Math.round(sr*60/bpm*2)){
  const chroma=new Float64Array(12);let energy=0;

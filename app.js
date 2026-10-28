@@ -196,6 +196,11 @@ async function render(preview) {
     lock(true);
     invalidate();
     $('progress').hidden = false;
+    if (!preview && validateScore(s).seconds > 300) {
+      status('長樂譜合成約需 1–3 分鐘，手機可能記憶體不足，建議用電腦。');
+      // 先讓瀏覽器繪出提醒，再開始合成。
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
     const blob = await renderAudio(s, mode, {...mix}, preview, (v, t) => {
       $('progress').value = v;
       status(t);
