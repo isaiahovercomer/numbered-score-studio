@@ -10,12 +10,12 @@
 - PR 說明要寫清楚：改了什麼、為什麼、取捨、驗證方式、哪些事留給 Isaiah 決定。
 
 ## 2. Git 與 Pull Request 流程
-- **所有改動走新分支＋pull request。不直接推 `main`，也不自行合併。** 合併由 Isaiah 決定。
+- **所有改動走新分支＋pull request，不直接推 `main`。** Isaiah 於 2026-10-28（Asia/Taipei）授權：完成修改與必要驗證後，直接上傳、合併並確認部署，不需逐次等待確認；不得略過失敗的測試或未解決的審查問題。
 - 分支名稱用 `cursor/<主題>`，一個主題一個 PR，保持小而專注。
 - 堆疊 PR（一個基於另一個）時，在 PR 說明寫明基底與合併順序；基底合併後把下一個 PR 的 base 改回 `main`。優先用「merge 基底分支」而不是 force push 來更新。
 - 先看 `gh pr list`／`gh pr view`、Bugbot 留言與 CI 狀態再開工；有新留言要在原分支修好並補回歸測試。
 - 純重構要附「輸出位元組不變」的證明（見 `golden-docx.test.js`）。刻意改變輸出時，PR 說明要列出差異。
-- 版本與 `CHANGELOG.md`：使用者可見的改動記在「未發佈」；發佈由 Isaiah 決定。
+- 版本與 `CHANGELOG.md`：使用者可見的改動記在「未發佈」；依上述持續授權，驗證通過後合併與發佈。
 
 ## 3. 絕對不可提交的內容
 `repo-hygiene.test.js` 會檢查，但請自己先守住：
@@ -28,7 +28,7 @@
 
 ## 4. 測試
 - **`npm test` 必須全過**（只用 Node 內建模組，不需安裝任何東西）；新行為要補測試，修 bug 要補「修正前會失敗」的回歸測試。
-- 主要測試：`limits.test.js`（錄音與樂譜上限）、`music.test.js`、`studio.test.js`、`worker.test.js`、`word-layout.test.js`（鎖定兩種 Word 版式）、`word-edge.test.js`（高風險邊界）、`word-chords.test.js`（和弦錯開與行尾回推）、`wording.test.js`（用字規則）、`golden-docx.test.js`（DOCX 位元組比對）、`score-edit.test.js`、`musicxml.test.js`（MusicXML 匯出）、`lyrics-diagnose.test.js`（一字一音診斷）、`word-lyrics-inline.test.js`（歌詞內文整句排法）、`repo-hygiene.test.js`、`line-length.test.js`（行寬 120；舊檔的超長行數只准減少）。新增測試檔記得加進 `package.json` 的 `test` 腳本。
+- 主要測試：`audio-review.test.js`（原錄音循環區間驗證）、`limits.test.js`（錄音與樂譜上限）、`music.test.js`、`studio.test.js`、`worker.test.js`、`word-layout.test.js`（鎖定兩種 Word 版式）、`word-edge.test.js`（高風險邊界）、`word-chords.test.js`（和弦錯開與行尾回推）、`wording.test.js`（用字規則）、`golden-docx.test.js`（DOCX 位元組比對）、`score-edit.test.js`、`musicxml.test.js`（MusicXML 匯出）、`lyrics-diagnose.test.js`（一字一音診斷）、`word-lyrics-inline.test.js`（歌詞內文整句排法）、`repo-hygiene.test.js`、`line-length.test.js`（行寬 120；舊檔的超長行數只准減少）。新增測試檔記得加進 `package.json` 的 `test` 腳本。
 - **刻意改變排版或用字規則**時，先改測試反映新規格，再 `UPDATE_GOLDEN=1 npm test` 更新 `golden-docx.json`，並在 PR 說明為何輸出改變。
 - 瀏覽器煙霧測試（可選）：`npm install && npm run test:e2e`（手機 390px／桌面 1440px，檢查無水平捲動、主要控制項可見、可匯出 Word／MIDI）。需要本機 Chrome（可用 `CHROME_PATH`）。CI 有獨立的 `e2e` job，不影響 `npm test`。
 - 改 UI 或拆檔時，除了測試，也用 Playwright 實際操作比對行為（重構 PR 的做法）。
@@ -95,7 +95,7 @@
 - 官方中文字：**裏**、**着**、**祂**、**豫**定、甚**麼**、召會、綱目。
 
 ## 10. 完成前檢查
-- [ ] 在新分支、已開 PR；沒有推 main、沒有合併
+- [ ] 在新分支、已開 PR；沒有直接推 main；驗證通過後依授權合併並確認部署
 - [ ] `npm test` 全過；新行為與 bug 修正有測試
 - [ ] 沒有 secrets、字型、音檔、歌詞、`.docx` 進 repo；`config.json` 未改
 - [ ] 沒有改排版規則或輸出行為（或已明確標為需 Isaiah 決定）
