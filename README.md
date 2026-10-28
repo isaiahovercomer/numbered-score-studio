@@ -33,10 +33,13 @@ worker.js 是後端原始碼，wrangler.toml 包含環境變數與 QUOTA Durable
 - 伴奏和弦：本機頻譜 chroma 樣板估計（大／小／屬七），可下載秒數時間表；確認同調同速及譜面起點後才套入。**不是 Chordino**，不處理反覆或自由速度的自動對位。
 - 建議和弦：針對空白小節依旋律配上調內候選，與音訊和弦估計分開標示；不覆蓋已有和弦。
 - Word：直接產生 OOXML ZIP，不用遠端服務。原生可編輯 01SMN 文字、標楷體、深紅 Times New Roman 和弦與原生數字下標。一般資料依字寬排版；未改寫的技能 `systems` 參考資料會保留既有記譜、歌詞對位、短弧及跨小節延音，並整組置中。
+  和弦過近時左邊優先、右邊錯開，可見間距至少 2 pt，行尾回推；不縮字、不刪和弦。
+  整行過密時匯出面板會顯示警告，仍可匯出。回歸測試見 `word-chords.test.js`。
 - 歌詞：中文以一字一音為主、各節以空行分隔。字數不符時明確停止，不任意補刪或錯配。英文分詞及自由一字多音尚不支援。
   - 一字一音診斷（`lyrics-diagnose.js`）：字數不符時，在歌詞欄下方即時以紅字指出第幾節、少／多幾字、從哪個段落第幾小節第幾拍開始沒有字（或哪個字起沒有音），以及與參照節第幾行字數不同；匯出 Word／MusicXML 失敗時，狀態列在原訊息後附上第一則診斷。
   - 起音＝非休止、且不是延音連結延續的音；延音連結後的音不另配字。段落依書寫順序各算一次（不展開反覆），每節歌詞須涵蓋主歌＋副歌全部起音。
   - 只提示、不修改：不補字、不刪字、不重新對位。逐行比對依賴你的分行，分行不可靠時只報總差；提示是推測，不保證指出真正原因。
+- Word 歌詞排法（「Word 版式」→「歌詞排法」）：預設「內文整句」，歌詞是標楷體 14 pt 的一般段落、每節一行，以定位點對準音符，可在 Word 裡直接改字；「逐字方塊」是舊版（每字一個文字方塊）。限制：譜行仍是 01SMN 文字方塊；在 Word 裡插字使某字超過預留寬度時，後面的字會跳到下一個定位點；複製歌詞成純文字會帶 Tab，跨字搜尋會被 Tab 隔開；Word 實機尚未驗證。
 - Word 輸出書寫段落各一次，不展開演奏 form 的全曲反覆。請在下載後依實際字型檢查頁數；長譜正常分頁，不裁切。
 - 不在公開網站散布 01SMN 字型。使用者在 Word 裝置自行安裝 01SMN 與標楷體。瀏覽器編輯器以一般文字音符顯示。
 
@@ -46,7 +49,10 @@ worker.js 是後端原始碼，wrangler.toml 包含環境變數與 QUOTA Durable
 
 ## 測試與 CI
 
-`npm test` 另含 `wording.test.js`（官方用字規則的資料一致性、誤改防護、只改輸出不改原稿、逐字對位不變）與 `word-layout.test.js`（鎖定兩種 Word 版式：原版式 classic 的 A4、標楷體 22pt／01SMN 14pt／歌詞 13.5pt，以及預設的水流職事站官方版式 lsm 的 Letter、32.5 pt 邊界、①②③ 節次、調號左拍號右、版權行；兩者共通的深紅 #9C2323 和弦與原生下標、DOCX 封包完整性）與 `repo-hygiene.test.js`（確認儲存庫沒有字型、私人音檔、歌詞、金鑰，`.gitignore` 與 config.json 符合規範）。`.github/workflows/test.yml` 會在每個 pull request 與推送到 main 時自動執行 `npm test`；工作流程不使用任何 secret。
+`npm test` 另含 `wording.test.js`（官方用字規則的資料一致性、誤改防護、只改輸出不改原稿、逐字對位不變）與 `word-layout.test.js`（鎖定兩種 Word 版式：原版式 classic 的
+A4、標楷體 22pt／01SMN 14pt／歌詞 13.5pt，以及預設的水流職事站官方版式 lsm 的 A4（Letter 可選）、32.5 pt 邊界、①②③ 節次、調號左拍號右；兩者共通的深紅 #9C2323
+和弦與原生下標、DOCX 封包完整性）與 `repo-hygiene.test.js`（確認儲存庫沒有字型、私人音檔、歌詞、金鑰，`.gitignore` 與 config.json
+符合規範）。`.github/workflows/test.yml` 會在每個 pull request 與推送到 main 時自動執行 `npm test`；工作流程不使用任何 secret。
 
 ### 更多測試與開發規則
 
@@ -54,7 +60,9 @@ worker.js 是後端原始碼，wrangler.toml 包含環境變數與 QUOTA Durable
 
 ## Word 版式（水流職事站官方 ／ 原版式）
 
-匯出 Word 前可在「Word 版式」選單選擇：預設為水流職事站官方標語歌版式（US Letter、32.5 pt 邊界、明體、①②③ 節次、左「D大調」右「4/4」、不顯示速度、可選末頁版權行）；也可切回原版式（A4、標楷體、一、二、三、），或個別覆寫紙張、節次樣式、是否顯示速度。完整對照見 `NOTATION_RULES.md`。程式介面：`wordBlob(score, {preset, paper, verseMarks, tempo, copyright, wording})`。
+匯出 Word 前可在「Word 版式」選單選擇：預設為水流職事站官方標語歌版式（A4 預設、Letter 可選、32.5 pt 邊界、明體、①②③
+節次、左「D大調」右「4/4」、不顯示速度）；也可切回原版式（A4、標楷體、一、二、三、），或個別覆寫紙張、節次樣式、是否顯示速度。官方實測紙張為 US Letter；要完全依官方紙張請選 Letter。完整對照見
+`NOTATION_RULES.md`。程式介面：`wordBlob(score, {preset, paper, verseMarks, tempo, wording, lyricLayout})`。
 
 ### 官方用字（匯出時自動套用）
 

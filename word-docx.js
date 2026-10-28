@@ -9,6 +9,19 @@ const esc = s =>
 export function run(text, font, size, color = '000000', sub = false, ascii = font, italic = false) {
   return `<w:r><w:rPr><w:rFonts w:ascii="${ascii}" w:hAnsi="${ascii}" w:eastAsia="${font}"/>${italic ? '<w:i/>' : ''}<w:color w:val="${color}"/><w:sz w:val="${size * 2}"/>${sub ? `<w:vertAlign w:val="${sub === 'super' ? 'superscript' : 'subscript'}"/>` : ''}</w:rPr><w:t xml:space="preserve">${esc(text)}</w:t></w:r>`;
 }
+// 內文歌詞段落：每項一個左定位點（twip，相對左邊界）＋ Tab ＋文字。pPr 子元素須依 OOXML 順序。
+// items = [{pos, text}]（pos 單位 pt，由小到大）；last = 本列最後一節（不加 keepNext、加段後距 after）。
+export function lyricParagraph(items, {last = false, after = 0, font, size, ascii, line}) {
+  if (items.length > 64) throw Error('一行歌詞超過 64 個定位點，Word 無法開啟；請把版面改窄或分行。');
+  const tabs = items.map(it => `<w:tab w:val="left" w:pos="${Math.round(it.pos * 20)}"/>`).join('');
+  const pPr =
+    `<w:pPr>${last ? '' : '<w:keepNext/>'}<w:tabs>${tabs}</w:tabs>` +
+    '<w:autoSpaceDE w:val="0"/><w:autoSpaceDN w:val="0"/><w:snapToGrid w:val="0"/>' +
+    `<w:spacing w:before="0" w:after="${last ? after : 0}" w:line="${Math.round(line * 20)}" w:lineRule="exact"/>` +
+    '<w:ind w:left="0" w:right="0" w:firstLine="0"/><w:jc w:val="left"/></w:pPr>';
+  const runs = items.map(it => '<w:r><w:tab/></w:r>' + run(it.text, font, size, '000000', false, ascii)).join('');
+  return `<w:p>${pPr}${runs}</w:p>`;
+}
 let shapeId = 0;
 export const resetShapeIds = () => {
   shapeId = 0;
@@ -129,27 +142,5 @@ export function zipStore(files) {
       ])
     ],
     {type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}
-  );
-}
-// 末頁版權行：置於最後一個段落內、相對頁面底部定位（官方約距底 25.5 pt），因此只出現在最後一頁，且不產生多餘空白頁。
-export function copyrightAnchor(text, o) {
-  const w = 360,
-    h = 14;
-  shapeId++;
-  return (
-    `<w:r><w:drawing>` +
-    `<wp:anchor distT="0" distB="0" distL="0" distR="0" simplePos="0" relativeHeight="${shapeId}" behindDoc="0" locked="0" layoutInCell="1" allowOverlap="1">` +
-    `<wp:simplePos x="0" y="0"/><wp:positionH relativeFrom="page"><wp:align>center</wp:align></wp:positionH>` +
-    `<wp:positionV relativeFrom="page"><wp:posOffset>${emu(o.pageH - 36.5)}</wp:posOffset></wp:positionV>` +
-    `<wp:extent cx="${emu(w)}" cy="${emu(h)}"/><wp:effectExtent l="0" t="0" r="0" b="0"/><wp:wrapNone/>` +
-    `<wp:docPr id="${shapeId}" name="Copyright ${shapeId}"/><wp:cNvGraphicFramePr/><a:graphic>` +
-    `<a:graphicData uri="http://schemas.microsoft.com/office/word/2010/wordprocessingShape"><wps:wsp>` +
-    `<wps:cNvSpPr txBox="1"/><wps:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${emu(w)}" cy="${emu(h)}"/></a:xfrm>` +
-    `<a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></wps:spPr><wps:txbx>` +
-    `<w:txbxContent><w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="${h * 20}" w:lineRule="exact"/>` +
-    `<w:jc w:val="center"/>` +
-    `</w:pPr>${run(text, o.textFont, 10, '000000', false, 'New Century Schoolbook', true)}</w:p></w:txbxContent>` +
-    `</wps:txbx><wps:bodyPr wrap="none" lIns="0" tIns="0" rIns="0" bIns="0"><a:noAutofit/></wps:bodyPr></wps:wsp>` +
-    `</a:graphicData></a:graphic></wp:anchor></w:drawing></w:r>`
   );
 }
