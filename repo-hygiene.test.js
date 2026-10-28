@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const SKIP_DIRS = new Set(['.git', 'node_modules', '.wrangler']);
@@ -33,12 +34,23 @@ test('儲存庫不含字型檔（私人 01SMN 不得公開散布）', () => {
   assert.deepEqual(fonts, []);
 });
 
-test('儲存庫只允許既有音色 MP3，不得夾帶私人錄音、MIDI 或歌詞檔', () => {
+test('儲存庫只允許既有音色與已登記的故事合成語音，不得夾帶私人錄音、MIDI 或歌詞檔', () => {
   const samples = JSON.parse(fs.readFileSync(path.join(root, 'samples.json'), 'utf8'));
   const allowed = new Set();
   for (const inst of Object.values(samples)) for (const s of inst.samples) allowed.add(path.basename(s.url));
+  // 使用者授權公開故事網站的合成旁白；僅接受固定命名及雜湊相符的生成資產。
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, 'family-story-365/narration-assets.json'), 'utf8'));
+  assert.equal(manifest.model, 'MeloTTS-Chinese');
+  assert.equal(manifest.pages.length, 21);
+  for (const page of manifest.pages) {
+    assert.match(page.file, /^(toddler|theatre|comic|reader)-\d{2}\.mp3$/);
+    const name = 'family-story-365/' + page.file;
+    const bytes = fs.readFileSync(path.join(root, name));
+    assert.equal(createHash('sha256').update(bytes).digest('hex'), page.sha256);
+    allowed.add(name);
+  }
   const audio = files.filter(f => /\.(mp3|wav|m4a|aac|flac|ogg|mid|midi)$/i.test(f));
-  assert.deepEqual(audio.filter(f => !allowed.has(f)), [], '發現未登記於 samples.json 的音檔');
+  assert.deepEqual(audio.filter(f => !allowed.has(f)), [], '發現未登記的音檔');
   assert.deepEqual(files.filter(f => /(lyrics?|歌詞).*\.(txt|docx?)$/i.test(f)), []);
   assert.deepEqual(files.filter(f => /\.docx$/i.test(f)), [], '匯出的 DOCX 不應提交');
 });
