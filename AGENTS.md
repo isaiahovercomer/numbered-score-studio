@@ -22,6 +22,8 @@
 - **金鑰與秘密**：API key、`.env`、`.dev.vars`、`OPENAI_API_KEY`、`IP_HASH_SALT`。`config.json` 只能放公開的後端網址（`recognitionEndpoint`），**不要改這個網址**。
 - **私人 01SMN 字型**及任何字型檔（`.ttf/.otf/.ttc/.woff*`）。
 - **音檔**：除了 `samples.json` 登記的音色 MP3，不得有錄音、MIDI、WAV 等。
+  使用者已授權故事網站公開合成旁白：僅例外允許 family-story-365/narration-assets.json 登記並通過雜湊驗證的21個合成MP3。
+  此例外不適用於私人錄音；模型、字型及中間WAV不提交。
 - **歌詞與私人樂譜**：測試與範例只用合成資料；範例曲〈信的路程〉由使用者提供，不宣告為公有領域。
 - 匯出的 `.docx`、`private/` 資料夾。
 - `worker.js` 的變更不會因合併而上線，需 Isaiah 另外 `wrangler deploy`。
