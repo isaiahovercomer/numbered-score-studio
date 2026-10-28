@@ -444,3 +444,40 @@ for (const count of [2604, 4100]) {
       '辨識出的樂譜超過 13 分鐘或 1024 小節，請剪短錄音後再試。');
   }));
 }
+
+// 原錄音校對使用既有音色樣本，沒有私人錄音。
+for (const width of [390, 1440]) {
+  test(`[${width}px] 原錄音慢速與循環校對`, async () => {
+    const context = await browser.newContext({viewport: {width, height: 900}});
+    await context.route(url => !url.href.startsWith(srv.url), route => route.abort());
+    const page = await context.newPage();
+    try {
+      await page.goto(srv.url);
+      await page.setInputFiles('#audioFile', new URL('../piano-45.mp3', import.meta.url).pathname);
+      await page.waitForSelector('#audioReview');
+      await page.selectOption('#reviewRate', '0.75');
+      assert.equal(await page.$eval('#sourcePlayer', p => p.playbackRate), 0.75);
+      assert.equal(await page.$eval('#sourcePlayer', p => p.preservesPitch), true);
+      await page.fill('#reviewStart', '0');
+      await page.fill('#reviewEnd', '0.6');
+      await page.click('#reviewLoop');
+      await page.waitForFunction(() => !document.querySelector('#sourcePlayer').paused);
+      assert.equal(await page.getAttribute('#reviewLoop', 'aria-pressed'), 'true');
+      await page.evaluate(() => { document.querySelector('#sourcePlayer').currentTime = 0.7; });
+      await page.waitForFunction(() => document.querySelector('#sourcePlayer').currentTime < 0.6);
+      await page.click('#reviewLoop');
+      assert.equal(await page.$eval('#sourcePlayer', p => p.paused), true);
+      await page.fill('#reviewEnd', '0.1');
+      await page.click('#reviewLoop');
+      assert.match(await page.textContent('#reviewStatus'), /至少比起點晚/);
+      assert.equal(await page.getAttribute('#reviewLoop', 'aria-pressed'), 'false');
+      const w = await noHorizontalScroll(page);
+      assert.ok(w.scroll <= w.client, '校對面板不得水平溢出');
+      await page.setInputFiles('#audioFile', new URL('../piano-48.mp3', import.meta.url).pathname);
+      await page.waitForSelector('#audioReview');
+      assert.equal(await page.getAttribute('#reviewLoop', 'aria-pressed'), 'false');
+    } finally {
+      await context.close();
+    }
+  });
+}
