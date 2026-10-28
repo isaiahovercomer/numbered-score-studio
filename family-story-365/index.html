@@ -528,6 +528,7 @@ class Narrator {
 }
 
 
+const esc = escapeHTML;
 const main = document.querySelector('#main');
 const synth = window.speechSynthesis;
 const narrator = new Narrator(synth, text => new SpeechSynthesisUtterance(text));
