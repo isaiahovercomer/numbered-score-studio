@@ -21,6 +21,8 @@ function launch(hash = '#story/theatre/0') {
       focus() {effects.push(['focus', selector]);},
       scrollIntoView() {effects.push(['scroll', selector]);},
       pause() {effects.push(['pause', selector]);},
+      play() {effects.push(['play', selector]); return Promise.resolve();},
+      load() {effects.push(['load', selector]);},
       setAttribute() {}, removeAttribute() {}
     });
     return elements.get(selector);
@@ -94,10 +96,65 @@ test('自動翻頁也將新場景帶入視窗', () => {
 
 test('開始影片時停止逐頁播放，避免計時器中途換頁', () => {
   const app = launch();
+  app.run('useDeviceVoice = true');
   app.run('playPage()');
   assert.equal(app.run('silentState'), 'playing');
   app.emit('#main', 'play', {target: {matches: selector => selector === '#story-video'}});
   assert.equal(app.run('silentState'), 'idle');
+});
+
+test('未安裝中文聲音也能播放預製旁白，暫停與繼續沿用同一音檔', () => {
+  const app = launch('#story/toddler/0');
+  app.run('playPage()');
+  assert.ok(app.effects.some(([action, selector]) => action === 'play' && selector === '#page-audio'));
+  assert.equal(app.run('recordedState'), 'playing');
+  app.run('togglePlayback()');
+  assert.equal(app.run('recordedState'), 'paused');
+  app.run('togglePlayback()');
+  assert.equal(app.run('recordedState'), 'playing');
+});
+
+test('預製旁白結束後自動播放下一頁，停止後的舊完成事件不會翻頁', () => {
+  const app = launch('#story/toddler/0');
+  app.run('playPage()');
+  app.emit('#main', 'ended', {target: app.element('#page-audio')});
+  assert.equal(app.location.hash, '#story/toddler/1');
+  assert.equal(app.run('recordedState'), 'playing');
+  app.run('stopPlayback()');
+  app.emit('#main', 'ended', {target: app.element('#page-audio')});
+  assert.equal(app.location.hash, '#story/toddler/1');
+});
+
+test('旁白播放失敗有明確提示，不自動跳過故事', async () => {
+  const app = launch('#story/toddler/0');
+  app.element('#page-audio').play = () => Promise.reject(new Error('載入失敗'));
+  app.run('playPage()');
+  await Promise.resolve();
+  assert.equal(app.run('recordedState'), 'idle');
+  assert.match(app.element('#player-status').textContent, /無法播放/);
+  assert.equal(app.location.hash, '#story/toddler/0');
+});
+
+test('預製旁白使用與目前版本頁碼相符的資產', () => {
+  for (const [hash, file] of [['#story/toddler/5', 'toddler-06.mp3'],
+    ['#story/reader/2', 'reader-03.mp3'], ['#story/comic/4', 'comic-05.mp3']]) {
+    assert.ok(launch(hash).element('#main').innerHTML.includes(file));
+  }
+});
+
+test('音檔播放中發生媒體錯誤會停止狀態並顯示重試提示', () => {
+  const app = launch('#story/toddler/0');
+  app.run('playPage()');
+  app.emit('#main', 'error', {target: app.element('#page-audio')});
+  assert.equal(app.run('recordedState'), 'idle');
+  assert.match(app.element('#player-status').textContent, /無法播放/);
+});
+
+test('音檔來源錯誤後重試會重新載入資源', () => {
+  const app = launch('#story/toddler/0');
+  app.element('#page-audio').error = {code: 4};
+  app.run('playPage()');
+  assert.ok(app.effects.some(([action, selector]) => action === 'load' && selector === '#page-audio'));
 });
 
 test('開始逐頁播放及離開可見畫面時會暫停影片', () => {

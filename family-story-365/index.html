@@ -190,13 +190,14 @@ dialog input[type=range]{width:100%;accent-color:var(--green)}dialog output{floa
   <dialog id="settings" aria-labelledby="settings-title">
     <form method="dialog"><button class="close quiet" aria-label="關閉朗讀設定">✕</button></form>
     <p class="eyebrow">一起聽故事</p><h2 id="settings-title">找到舒服的聲音</h2>
-    <p>第一版使用裝置提供的本機中文聲音，不會把故事傳送到付費語音服務。</p>
+    <p>預設播放離線 AI 模型預先產生的朗讀音檔；不需安裝中文語音，也不使用付費語音服務。</p>
+    <label class="toggle"><input id="device-voice" type="checkbox">改用這台裝置的中文聲音</label>
     <label for="voice">朗讀聲音</label><select id="voice"></select>
-    <label for="rate">朗讀速度 <output id="rate-value">0.9 倍</output></label>
-    <input id="rate" type="range" min="0.6" max="1.2" value="0.9" step="0.1">
+    <label for="rate">朗讀速度 <output id="rate-value">1.0 倍</output></label>
+    <input id="rate" type="range" min="0.6" max="1.2" value="1" step="0.1">
     <p id="voice-status" class="note" role="status"></p>
-    <button id="voice-test" class="primary">試聽一句</button>
-    <p class="note">聲音品質依裝置而異。之後可替換為本機模型產生的固定旁白；目前未製作 MP3。</p>
+    <button id="voice-test" class="primary">試聽裝置聲音</button>
+    <p class="note">AI 女聲為一般中文試聽版，尚未完成台灣口音校對。裝置聲音的品質依手機或電腦而異。</p>
   </dialog>
   <div id="announcement" class="sr-only" role="status" aria-live="polite"></div>
   <noscript><p>這個故事網站需要啟用 JavaScript，才能切換版本與翻頁。</p></noscript>
@@ -542,7 +543,10 @@ const narrator = new Narrator(synth, text => new SpeechSynthesisUtterance(text))
 let route = parseRoute(location.hash, versions);
 let voices = [];
 let selectedVoice = '';
-let rate = .9;
+let rate = 1;
+let useDeviceVoice = false;
+let recordedState = 'idle';
+let recordedGeneration = 0;
 let showZhuyin = true;
 let fontSize = 23;
 let silentTimer = null;
@@ -660,15 +664,15 @@ function storyMarkup() {
     ${route.mode === 'theatre' && route.page === 0 ? `
     <section class="end-card video-preview" aria-labelledby="video-title">
       <h2 id="video-title">先看一段故事影片</h2>
-      <p>27 秒精簡故事・六個場景，附繁體中文字幕。目前沒有旁白。</p>
+      <p>六個場景，搭配 AI 合成女聲與繁體中文字幕。朗讀發音與語氣仍為試聽版。</p>
       <video id="story-video" controls playsinline preload="metadata" poster="./video-poster.png"
-        aria-label="霜淇淋的錢：27秒字幕預覽">
-        <source src="./silent-preview.mp4" type="video/mp4">
-        <track kind="subtitles" src="./preview.zh-TW.vtt" srclang="zh-TW" label="繁體中文" default>
+        aria-label="霜淇淋的錢：有聲故事影片">
+        <source src="./narrated-preview.mp4" type="video/mp4">
+        <track kind="subtitles" src="./narrated.zh-TW.vtt" srclang="zh-TW" label="繁體中文" default>
         你的瀏覽器無法播放此影片，請使用下方連結下載。
       </video>
-      <p class="video-links"><a class="text-link" href="./silent-preview.mp4" download>下載無聲影片</a>
-        <a class="text-link" href="./preview.zh-TW.vtt" download>下載字幕（VTT）</a>
+      <p class="video-links"><a class="text-link" href="./narrated-preview.mp4" download>下載有聲影片</a>
+        <a class="text-link" href="./narrated.zh-TW.vtt" download>下載字幕（VTT）</a>
         <button class="secondary" id="read-scenes">逐頁讀完整故事 ${icon('arrow', 17)}</button></p>
       <p class="note">字幕可用播放器選單切換；下載影片時請一併下載字幕。下方有完整故事與裝置朗讀。</p>
     </section>` : ''}
@@ -686,6 +690,8 @@ function storyMarkup() {
       </div></div>
       <div class="book ${showZhuyin ? '' : 'hide-zhuyin'}" id="book" tabindex="-1"
         aria-label="第 ${route.page + 1} 頁：${page.title}">${readingMarkup(version, page)}</div>
+      <audio id="page-audio" preload="none"
+        src="./${route.mode}-${String(route.page + 1).padStart(2, '0')}.mp3"></audio>
       <div class="transport"><div class="audio-controls">
         <button id="play" class="primary">${icon('play', 19)}<span>開始朗讀</span></button>
         <button id="replay" class="replay" aria-label="從這頁重新播放">${icon('replay', 19)}</button></div>
@@ -706,12 +712,14 @@ function storyMarkup() {
         <section><h3>一起禱告</h3><p>${story.prayer}</p></section></div></details>
       <details class="faith"><summary>查看原故事與版本說明</summary><p>${story.original}</p>
         <p class="note">四個閱讀版本依原故事改寫；畫面是原創 SVG 示範插畫。劇場提供精簡字幕影片，
-          以及可逐頁播放的網頁輕動畫；正式旁白仍在製作中。</p>
+          以及可逐頁播放的網頁輕動畫。旁白由本機模型生成，並非真人錄音；發音與語氣仍待校對。</p>
       </details>
       <details class="faith"><summary>給家長：下載本機製作包</summary>
         <p>包含四版本共21頁旁白稿、六張插畫、Windows朗讀腳本與影片組裝工具。</p>
         <p>朗讀腳本需在Windows執行；聲音品質與可用性仍待裝置實測。</p>
         <a class="text-link" href="./story-production-kit.zip" download>下載製作包（ZIP）</a>
+        <p><a class="text-link" href="./local-narration-kit.zip" download>下載離線 AI 朗讀製作包</a></p>
+        <p class="note">本機語音引擎：sherpa-onnx／MeloTTS。一般中文模型，尚未完成台灣口音校對。</p>
       </details>
       <p class="source">故事來源：家庭時光365 · ${story.sourceId} · <a href="${story.sourceURL}"
         target="_blank" rel="noopener">原始教材</a>。改寫與注音為示範校對稿。</p>
@@ -719,6 +727,10 @@ function storyMarkup() {
 }
 
 function stopPlayback({pauseVideo = true} = {}) {
+  recordedGeneration++;
+  recordedState = 'idle';
+  const audio = document.querySelector('#page-audio');
+  if (audio) {audio.pause(); audio.currentTime = 0;}
   if (pauseVideo) document.querySelector('#story-video')?.pause();
   narrator.stop();
   clearTimeout(silentTimer);
@@ -785,6 +797,7 @@ function currentVoice() {
 function playPage() {
   if (route.view !== 'story') return;
   document.querySelector('#story-video')?.pause();
+  if (!useDeviceVoice) {playRecording(); return;}
   const voice = currentVoice();
   const page = versions[route.mode].pages[route.page];
   if (!voice && route.mode === 'theatre') {
@@ -800,11 +813,28 @@ function playPage() {
   updatePlayer();
 }
 
+function playRecording() {
+  const audio = document.querySelector('#page-audio');
+  if (!audio) return;
+  if (audio.error) audio.load();
+  const generation = ++recordedGeneration;
+  recordedState = 'playing';
+  audio.playbackRate = rate;
+  audio.play().catch(() => {
+    if (generation !== recordedGeneration || recordedState !== 'playing') return;
+    recordedState = 'idle';
+    updatePlayer();
+    document.querySelector('#player-status').textContent =
+      '音檔暫時無法播放，請再按一次；也可以在朗讀設定切換裝置聲音。';
+  });
+  updatePlayer();
+}
+
 function updatePlayer() {
   const button = document.querySelector('#play');
   if (!button) return;
-  const state = narrator.state !== 'idle' ? narrator.state : silentState;
-  const hasVoice = Boolean(currentVoice());
+  const state = recordedState !== 'idle' ? recordedState : narrator.state !== 'idle' ? narrator.state : silentState;
+  const hasVoice = !useDeviceVoice || Boolean(currentVoice());
   const theatre = route.mode === 'theatre';
   const label = state === 'playing' ? '暫停' : state === 'paused' ? '繼續播放' :
     hasVoice ? (theatre ? '播放故事' : '開始朗讀') : theatre ? '播放無聲動畫' : '尚無本機中文聲音';
@@ -816,13 +846,18 @@ function updatePlayer() {
   book.classList.toggle('is-paused', state === 'paused');
   document.querySelector('#player-status').textContent = state === 'playing' ?
     (hasVoice ? '正在朗讀這一頁…' : '無聲動畫播放中，每個場景停留 7 秒。') : state === 'paused' ? '已暫停。' : '';
-  document.querySelector('#player-note').textContent = hasVoice ?
+  document.querySelector('#player-note').textContent = !useDeviceVoice ?
+    'AI 朗讀試聽版：本機模型產生的固定音檔，手機可直接播放；發音與語氣仍待校對。' : hasVoice ?
     `裝置朗讀：${currentVoice().name}。可在「朗讀設定」切換聲音；目前為語音試聽版。` :
     '這台裝置尚未提供本機中文聲音；仍可翻頁閱讀。請在系統安裝中文語音，再重新開啟瀏覽器。';
 }
 
 function togglePlayback() {
-  if (narrator.state === 'playing') narrator.pause();
+  if (recordedState === 'playing') {
+    recordedState = 'paused';
+    document.querySelector('#page-audio').pause();
+  } else if (recordedState === 'paused') playRecording();
+  else if (narrator.state === 'playing') narrator.pause();
   else if (narrator.state === 'paused') narrator.resume();
   else if (silentState === 'playing') {
     clearTimeout(silentTimer);
@@ -878,6 +913,19 @@ main.addEventListener('play', event => {
   }
 }, true);
 
+main.addEventListener('ended', event => {
+  if (event.target !== document.querySelector('#page-audio') || recordedState !== 'playing') return;
+  recordedState = 'idle';
+  finishedPage();
+}, true);
+
+main.addEventListener('error', event => {
+  if (event.target !== document.querySelector('#page-audio') || useDeviceVoice) return;
+  stopPlayback();
+  updatePlayer();
+  document.querySelector('#player-status').textContent = '音檔暫時無法播放，請再按一次或切換裝置聲音。';
+}, true);
+
 main.addEventListener('change', event => {
   if (event.target.id === 'zhuyin') {
     showZhuyin = event.target.checked;
@@ -899,11 +947,14 @@ document.querySelector('#settings-open').addEventListener('click', () => {
   stopPlayback(); updatePlayer(); refreshVoices(); document.querySelector('#settings').showModal();
 });
 document.querySelector('#settings').addEventListener('close', () => {stopPlayback(); updatePlayer();});
+document.querySelector('#device-voice').addEventListener('change', event => {
+  stopPlayback(); useDeviceVoice = event.target.checked; updatePlayer();
+});
 document.querySelector('#voice').addEventListener('change', event => {
   narrator.stop(); selectedVoice = voices[Number(event.target.value)]?.voiceURI || ''; updatePlayer();
 });
 document.querySelector('#rate').addEventListener('input', event => {
-  narrator.stop(); rate = Number(event.target.value);
+  stopPlayback(); rate = Number(event.target.value);
   document.querySelector('#rate-value').textContent = `${rate.toFixed(1)} 倍`;
 });
 document.querySelector('#voice-test').addEventListener('click', () => {
