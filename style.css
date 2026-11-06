@@ -14,3 +14,41 @@
 .project-tools label { min-width: 0; max-width: 100%; }
 .project-tools select { max-width: 100%; width: 260px; min-height: 40px; }
 .project-tools p { flex-basis: 100%; margin: 0; overflow-wrap: anywhere; }
+
+/* 明暗對比導覽：透明視窗透出目前介紹的原始控制項。 */
+.feature-tour {
+  position: fixed; inset: 0; width: 100vw; height: 100dvh;
+  max-width: none; max-height: none; margin: 0; padding: 0;
+  border: 0; background: transparent; overflow: hidden; color: #122639;
+}
+.feature-tour::backdrop { background: transparent; }
+.feature-tour.no-spot { background: rgba(6, 17, 29, .82); }
+.tour-spot {
+  position: fixed; border-radius: 10px; pointer-events: none;
+  box-shadow: 0 0 0 9999px rgba(6, 17, 29, .82);
+  outline: 3px solid #8ff3dc; outline-offset: 1px;
+}
+.tour-card {
+  position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+  width: min(480px, calc(100% - 32px)); max-height: 55dvh; overflow: auto;
+  padding: 22px; box-sizing: border-box; border-radius: 16px;
+  background: #fffdf7; box-shadow: 0 12px 44px #0007; border: 1px solid #d9e5df;
+}
+.tour-progress { color: #356354; font-size: 13px; font-weight: 700; margin: 0 0 8px; }
+.tour-card h2 { color: #122639; font-size: 21px; line-height: 1.4; margin: 0 0 10px; }
+.tour-card #tourText { color: #334b59; line-height: 1.7; margin: 0 0 18px; }
+.tour-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.tour-actions button {
+  min-height: 44px; border: 1px solid #b6c9c2; border-radius: 8px;
+  color: #173a31; background: #fff; padding: 10px 12px; font: inherit; cursor: pointer;
+}
+.tour-actions #tourNext { margin-left: auto; color: #fff; background: #175f50; border-color: #175f50; }
+.tour-actions button:focus-visible { outline: 3px solid #1177c2; outline-offset: 3px; }
+.tour-actions button:disabled { opacity: .4; cursor: default; }
+#showTutorial { min-height: 44px; }
+@media (max-width: 600px) {
+  .top { flex-wrap: wrap; gap: 8px; }
+  .tour-card { bottom: 12px; padding: 18px; }
+  .tour-card h2 { font-size: 19px; }
+  .tour-actions button { font-size: 14px; padding: 10px; }
+}

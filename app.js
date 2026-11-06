@@ -1,3 +1,4 @@
+import {connectTour} from './tour.js';
 import {connectProjectSession} from './project-session.js';
 import {connectStudio} from './studio.js';
 import {fromTranscription, parseChordChanges} from './score-bridge.js';
@@ -375,3 +376,5 @@ registerModelContext({
   }
 });
 
+
+connectTour();
