@@ -7,3 +7,10 @@
 .mix-panel .word-options{border-top-color:#466050}.mix-panel .word-options summary,.mix-panel .word-options label{color:#e5efdf}
 
 .lyric-diag{color:#a33b2c}.lyric-diag:empty{display:none}
+
+
+.project-tools { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; align-items: end; }
+.project-tools button { min-height: 40px; }
+.project-tools label { min-width: 0; max-width: 100%; }
+.project-tools select { max-width: 100%; width: 260px; min-height: 40px; }
+.project-tools p { flex-basis: 100%; margin: 0; overflow-wrap: anywhere; }

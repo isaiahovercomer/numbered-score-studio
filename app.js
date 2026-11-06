@@ -1,3 +1,4 @@
+import {connectProjectSession} from './project-session.js';
 import {connectStudio} from './studio.js';
 import {fromTranscription, parseChordChanges} from './score-bridge.js';
 import {parseNotes, formatNotes, chordVoicing, validateScore, midiBytes} from './music.js';
@@ -8,6 +9,7 @@ import {$} from './dom.js';
 import {buildMixer} from './mixer.js';
 import {transposeScore, buildForm} from './score-edit.js';
 import {registerModelContext} from './webmcp.js';
+let session;
 let score,
   current,
   config = {},
@@ -33,6 +35,7 @@ function invalidate() {
   $('download').hidden = true;
 }
 function changed() {
+  session?.capture();
   invalidate();
   try {
     const v = validateScore(score);
@@ -89,7 +92,7 @@ function editor() {
         row.classList.toggle('bad', Math.abs(sum - expected) > 0.00001);
       };
       check();
-      note.onchange = () => {
+      note.oninput = note.onchange = () => {
         try {
           bar.notes = parseNotes(note.value, score.key);
           delete bar.tieFrom;
@@ -100,10 +103,11 @@ function editor() {
           bar._invalid = true;
           row.classList.add('bad');
           invalidate();
+          session?.update();
           status(e.message, true);
         }
       };
-      ch.onchange = () => {
+      ch.oninput = ch.onchange = () => {
         try {
           const changes = parseChordChanges(ch.value, bar.beats ?? (score.meter[0] * 4) / score.meter[1]);
           score.chords ??= {};
@@ -115,6 +119,7 @@ function editor() {
         } catch (e) {
           bar._chordInvalid = true;
           invalidate();
+          session?.update();
           status(e.message, true);
         }
       };
@@ -166,6 +171,7 @@ function currentScore() {
 function form() {
   const n = Number($('repeats').value);
   if (!Number.isInteger(n) || n < 1 || n > 8) {
+    session?.update();
     status('遍數請輸入 1–8。', true);
     return;
   }
@@ -187,6 +193,7 @@ function lock(value) {
   busy = value;
   for (const el of document.querySelectorAll('input,select,textarea,button')) el.disabled = value;
   $('recognize').disabled = value || !imageData || !config.recognitionEndpoint;
+  session?.update();
 }
 async function render(preview) {
   if (busy) return;
@@ -223,11 +230,11 @@ async function render(preview) {
 }
 buildMixer($('mixer'), mix, invalidate);
 $('loadExample').onclick = example;
-$('title').onchange = () => {
+$('title').oninput = $('title').onchange = () => {
   score.title = $('title').value;
   changed();
 };
-$('bpm').onchange = () => {
+$('bpm').oninput = $('bpm').onchange = () => {
   score.bpm = Number($('bpm').value);
   changed();
 };
@@ -241,11 +248,12 @@ $('key').onchange = () => {
   editor();
   changed();
 };
-$('repeats').onchange = form;
+$('repeats').oninput = $('repeats').onchange = form;
 $('finalChorus').onchange = form;
 $('mode').onchange = changed;
 $('lyrics').oninput = () => {
   score.lyrics = $('lyrics').value;
+  session?.schedule();
 };
 $('addBar').onclick = () => {
   score.sections[current].push({chord: score.key, notes: [[null, (score.meter[0] * 4) / score.meter[1]]]});
@@ -353,6 +361,8 @@ if (!config.recognitionEndpoint)
   $('aiInfo').textContent = 'AI 讀譜尚未啟用。你仍可載入圖片對照、匯入 JSON 或編輯音符，並免費產生音樂。';
 const studio = connectStudio({getScore: currentScore, installScore, status, download, lock, isBusy: () => busy});
 await example();
+session = connectProjectSession({getScore: currentScore, installScore, isBusy: () => busy});
+await session.start();
 studio.updateCount();
 registerModelContext({
   getScore: currentScore,
@@ -364,3 +374,4 @@ registerModelContext({
     return {title: score.title, ...validateScore(score)};
   }
 });
+
