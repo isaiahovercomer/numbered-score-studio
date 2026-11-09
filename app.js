@@ -1,3 +1,4 @@
+import {connectReviewList} from './review-list.js';
 import {connectBarListening} from './bar-listening.js';
 import {connectMobileWorkspace} from './mobile-workspace.js';
 import {connectTour} from './tour.js';
@@ -12,7 +13,7 @@ import {$} from './dom.js';
 import {buildMixer} from './mixer.js';
 import {transposeScore, buildForm} from './score-edit.js';
 import {registerModelContext} from './webmcp.js';
-let session, listening;
+let session, listening, checklist;
 let score,
   current,
   config = {},
@@ -132,10 +133,12 @@ function editor() {
           status(e.message, true);
         }
       };
+      row.addEventListener('focusin', () => checklist?.select(i));
       row.append(n, ch, note, total);
       return row;
     })
   );
+  checklist?.render();
 }
 function installScore(s, keepAlignment = false) {
   validateScore(s);
@@ -373,8 +376,23 @@ if (!config.recognitionEndpoint)
 const studio = connectStudio({getScore: currentScore, installScore, status, download, lock, isBusy: () => busy,
   updateScore: s => installScore(s, true), onTranscribed: result => listening?.setMap(result)});
 listening = connectBarListening(studio.review, () => ({score, current, name: label(current)}));
+checklist = connectReviewList({state: () => ({score, current}), label, save: () => session?.capture(),
+  jump(section, index, category) {
+    current = section;
+    editor();
+    const row = $('measures').children[index];
+    checklist.select(index);
+    const inputs = row.querySelectorAll('input');
+    const target = category === '歌詞' ? $('lyrics') : inputs[category === '和弦' ? 0 : 1];
+    if (category === '歌詞') target.closest('details').open = true;
+    target.scrollIntoView({block: 'center'});
+    target.focus({preventScroll: true});
+  }});
 await example();
-session = connectProjectSession({getScore: currentScore, installScore, isBusy: () => busy});
+session = connectProjectSession({getScore: currentScore, isBusy: () => busy, installScore(s) {
+  const withoutMarks = value => JSON.stringify({...value, reviewItems: undefined});
+  installScore(s, !!score && withoutMarks(score) === withoutMarks(s));
+}});
 await session.start();
 studio.updateCount();
 registerModelContext({

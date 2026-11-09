@@ -1,5 +1,5 @@
 // 新功能導覽：增加版本號，新增 since 同版本的步驟；既有訪客只會看到新增步驟。
-export const TOUR_VERSION = 3;
+export const TOUR_VERSION = 4;
 export const TOUR_KEY = 'numbered-score-studio.tour-version';
 export const TOUR_STEPS = [
   {since: 1, target: '.source-tabs', title: '先選擇你的創作來源',
@@ -19,7 +19,9 @@ export const TOUR_STEPS = [
   {since: 2, target: '#appTools', title: '把譜間放到手機主畫面',
     text: '點「加入主畫面」開啟安裝或查看步驟。手機底部可切換匯入、校對、匯出；看到「可離線使用」後，沒有網路也能開啟詞譜、修改並下載 Word。'},
   {since: 3, target: '#barGuide', title: '點小節號，聽原錄音',
-    text: '選取錄音後，點校對區左邊的小節號即可對聽。在「小節對聽」設定前奏起點、段落遍次，或循環同一小節。'}
+    text: '選取錄音後，點校對區左邊的小節號即可對聽。在「小節對聽」設定前奏起點、段落遍次，或循環同一小節。'},
+  {since: 4, target: '#reviewGuide', title: '記下待校對的小節',
+    text: '先點小節號或音符欄，在清單選音高、拍數、和弦或歌詞。點清單項目即可跳回，改好按「完成」。遇到間奏，可在「小節對聽」設定本段本遍的錄音起點。'}
 ];
 export function tourSteps(seen, version = TOUR_VERSION, steps = TOUR_STEPS) {
   const previous = Number.isInteger(seen) && seen >= 0 ? seen : 0;

@@ -27,6 +27,12 @@
 </div>
 <div class="song-settings"><label class="song-title">曲名<input id="title" maxlength="80"></label><label>調性<select id="key"><option>C</option><option>Db</option><option>D</option><option>Eb</option><option>E</option><option>F</option><option>Gb</option><option>G</option><option>Ab</option><option>A</option><option>Bb</option><option>B</option></select></label><label>拍號<select id="meter"><option>3/4</option><option>4/4</option><option>2/4</option><option>6/8</option></select></label><label>速度 BPM<input id="bpm" type="number" min="40" max="200" value="88"></label></div>
 <div class="arrangement"><label>編曲風格<select id="mode"><option value="ensemble">流動鋼琴＋室內樂</option><option value="arpeggio">鋼琴分解和弦</option><option value="block">鋼琴柱式和弦</option><option value="melody">純鋼琴旋律</option></select></label><label>全曲遍數<input id="repeats" type="number" min="1" max="8" value="4"></label><label class="check"><input type="checkbox" id="finalChorus" checked>最後再奏一次副歌</label></div>
+<details class="review-box"><summary id="reviewGuide">待校對小節（<span id="markCount">0</span>）</summary>
+<p>點小節號或音符欄，再選要核對的項目。清單隨草稿和 JSON 保存。</p>
+<div class="bar-options"><label><span id="markSection"></span>小節號<input id="markBar" type="number" min="1" value="1"></label>
+<label>待核對項目<select id="markCategory"><option>音高</option><option>拍數</option><option>和弦</option><option>歌詞</option></select></label></div>
+<button type="button" id="markAdd" class="quiet">列入清單</button><span id="markMessage" role="status"></span>
+<ul id="markList"></ul></details>
 <details class="bar-listen"><summary id="barGuide">小節對聽：起點、速度與反覆</summary>
 <p>先在「匯入」選取原錄音，再點小節號試聽。單音辨識稿優先依起音時間定位；其他詞譜按固定速度估算。</p>
 <div class="bar-options"><label>第一小節起點（秒）<input id="barOffset" type="number" min="0" step="0.01" value="0"></label>
@@ -34,6 +40,12 @@
 <label>目前段落遍次<select id="barPass"></select></label>
 <label class="check"><input type="checkbox" id="barRepeat">循環這一小節</label></div>
 <p>有前奏時，請填第一小節開始的秒數；另匯入的錄音若有間奏或速度變化，後段可能需要重新校準。</p>
+<div class="anchor-tools"><label>本段本遍起點（錄音秒數）
+<input id="anchorTime" type="number" min="0" step="any" placeholder="例：84"></label>
+<button type="button" id="anchorSet" class="quiet">設定起點</button>
+<button type="button" id="anchorNow" class="quiet">採用播放器位置</button>
+<button type="button" id="anchorClear" class="quiet">移除此起點</button></div>
+<p id="anchorInfo" role="status"></p><p>起點沿用至下一個校準點，僅對本次錄音有效；重載頁面或更換作品後需重新設定。</p>
 </details><div class="bar-feedback"><span id="barStatus" role="status">點小節號可聽原錄音。</span>
 <button type="button" class="quiet" id="barStop">停止對聽</button></div><div id="formChips" class="form-chips"></div><div id="sectionTabs" class="tabs" role="tablist" aria-label="樂譜段落"></div><div class="editor-toolbar"><button id="suggestChords" class="quiet">＋ 建議伴奏和弦</button><span>和弦可輸入 F@0 C7@2</span></div><div class="measure-labels"><span>小節</span><span>和絃</span><span>簡譜音符與拍數</span><span>拍數</span></div><div id="measures" class="measures"></div><button id="addBar" class="quiet add-bar">＋ 新增小節</button>
 <details class="lyrics-box" open><summary>歌詞與節次</summary><label class="file-button lyric-import">匯入歌詞 TXT<input id="lyricFile" type="file" accept=".txt,text/plain"></label><label>歌詞<textarea id="lyrics" rows="5" placeholder="每節之間空一行，可加「一、」「二、」。中文每字對應一個起音，連結延音不重複配字。"></textarea></label><p id="lyricCount" class="hint"></p><p id="lyricDiag" class="hint lyric-diag" role="status" aria-live="polite"></p><p id="warnings" class="hint"></p></details></section>

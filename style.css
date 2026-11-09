@@ -82,3 +82,12 @@
 .bar-feedback button { flex:none; min-height:40px; }
 .measure .bar-number { padding:0; min-height:40px; color:#175c51; background:#e5f4ed; font-size:13px; }
 .measure,.measure-labels { grid-template-columns:40px minmax(48px,1fr) minmax(0,2fr) 36px; }
+
+.review-box { margin:8px 0; }
+.review-box summary { min-height:40px; font-weight:700; cursor:pointer; }
+.review-box p,.review-box [role=status] { font-size:14px; color:#435c68; }
+#markList { padding:0; margin:4px 0; list-style:none; }
+#markList li,.anchor-tools { display:flex; flex-wrap:wrap; gap:6px; align-items:end; }
+#markList li { justify-content:space-between; border-bottom:1px solid #d8e5de; }
+#markList button,.anchor-tools button,#markAdd { min-height:40px; }
+.measure.needs-review .bar-number { background:#ffe3a1; color:#624200; box-shadow:inset 3px 0 #925f00; }
