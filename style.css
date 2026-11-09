@@ -91,3 +91,22 @@
 #markList li { justify-content:space-between; border-bottom:1px solid #d8e5de; }
 #markList button,.anchor-tools button,#markAdd { min-height:40px; }
 .measure.needs-review .bar-number { background:#ffe3a1; color:#624200; box-shadow:inset 3px 0 #925f00; }
+
+.sheet-dialog { color:#193331; border:0; border-radius:16px; padding:0; width:min(760px,94vw);
+  max-height:94dvh; max-width:94vw; background:#f5f8f6; box-shadow:0 16px 56px #0005; }
+.sheet-dialog[open] { display:flex; flex-direction:column; }
+.sheet-dialog::backdrop { background:#102639c9; }
+.sheet-dialog header,.sheet-dialog footer { display:flex; gap:8px; align-items:center; flex-wrap:wrap;
+  padding:10px 14px; margin:0; color:#193331; background:#f5f8f6; }
+.sheet-dialog header { justify-content:space-between; }
+.sheet-dialog h2,.sheet-dialog header p { margin:0; }
+.sheet-dialog button { min-height:40px; background:#dfebe5; color:#183d33; }
+.sheet-dialog #sheetWord { background:#175c4b; color:white; }
+.sheet-stage { overflow:auto; padding:12px; background:#d8e1dd; min-height:70px; }
+.sheet-stage > svg { width:min(100%,595pt); max-width:none; display:block; margin:0 auto;
+  background:white; box-shadow:0 2px 8px #0003; font-family:serif; }
+.sheet-info { font-size:13px; line-height:1.4; margin:6px 14px 0; max-height:5em; overflow:auto; }
+.sheet-dialog footer { justify-content:center; }
+@media(max-width:460px) { .sheet-dialog footer button { font-size:14px; padding:8px; } }
+
+.sheet-dialog header,.sheet-dialog footer,.sheet-info { flex:0 0 auto; }

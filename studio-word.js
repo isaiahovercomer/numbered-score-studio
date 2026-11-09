@@ -1,4 +1,5 @@
 // Word 匯出面板：版式選項、說明文字、匯出與官方用字回報。
+import {connectSheetPreview} from './sheet-preview.js';
 import {wordBlob, layout, PRESETS, PAPERS, wordingHints, wordingChanges, describeChanges} from './word-export.js';
 import {$} from './dom.js';
 import {explainLyricError} from './lyrics-diagnose.js';
@@ -61,4 +62,7 @@ export function connectWordExport({getScore, status, download}) {
       status(s ? explainLyricError(e, s) : e.message, true);
     }
   };
+  connectSheetPreview({getScore, options: wordOptions, download: () => $('exportWord').click(),
+    report: (e, score) => status(score ? explainLyricError(e, score) : e.message, true)});
 }
+

@@ -176,10 +176,12 @@ function inlineRow(shapes, items, nVerses, mark, scorePt, o) {
 export function wordingChanges(s, options) {
   return resolveOptions(options).wording ? applyWordingToScore(s).changes : [];
 }
-export function wordBlob(s0, options) {
+export function wordDocumentXml(s0, options, onLayout) {
   resetShapeIds();
   const s = resolveOptions(options).wording ? applyWordingToScore(s0).score : s0;
-  const {systems, verses, offset, options: o} = layout(s, options);
+  const info = layout(s, options);
+  onLayout?.(info);
+  const {systems, verses, offset, options: o} = info;
   let body = headerXml(s, o, false);
   const reference = referenceBody(s, o);
   // 節次標記放在全曲第一個有字的列（通常是第一列；前奏整列休止時往後移），永遠不會消失。
@@ -224,6 +226,10 @@ export function wordBlob(s0, options) {
     `<w:body>${body}<w:sectPr><w:pgSz w:w="${PAPERS[o.paper].w}" w:h="${PAPERS[o.paper].h}"/>` +
     `<w:pgMar w:top="${o.marginTop}" w:right="${o.marginLR}" w:bottom="${o.marginBottom}" w:left="${o.marginLR}" w:header="0" w:footer="0"/>` +
     `</w:sectPr></w:body></w:document>`;
+  return xml;
+}
+export function wordBlob(s0, options) {
+  const xml = wordDocumentXml(s0, options);
   return zipStore({
     '[Content_Types].xml':
       '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>',
@@ -333,3 +339,4 @@ function referenceBody(s, o) {
   }
   return body;
 }
+
