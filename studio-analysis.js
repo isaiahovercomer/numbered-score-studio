@@ -50,7 +50,7 @@ function recordingError(error) {
 }
 
 // chordState.timeline：估計出的和弦時間表，與 studio-chords.js 共用。
-export function connectAnalysis({installScore, status, lock, isBusy, chordState}) {
+export function connectAnalysis({installScore, status, lock, isBusy, chordState, onTranscribed}) {
   let audioFile,
     sourceUrl,
     durationInvalid = false,
@@ -151,6 +151,7 @@ export function connectAnalysis({installScore, status, lock, isBusy, chordState}
           } else {
             const s = fromTranscription(data.result);
             installScore(s);
+            onTranscribed?.(data.result);
             $('mode').value = 'melody';
             $('analysisStatus').textContent = '旋律校對稿已載入。請先試聽，校正長音、休止與弱起，再加入歌詞。';
             status('單音辨識完成，請逐小節核對。');
@@ -184,3 +185,4 @@ export function connectAnalysis({installScore, status, lock, isBusy, chordState}
     }
   };
 }
+

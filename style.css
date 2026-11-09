@@ -74,3 +74,11 @@
   .app-tools { padding:12px; }
   .measure input { font-size:16px; }
 }
+.bar-listen { margin:12px 0 4px; }
+.bar-listen summary { font-weight:700; min-height:40px; cursor:pointer; }
+.bar-listen p,.bar-feedback { font-size:14px; line-height:1.5; color:#425c69; }
+.bar-options { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+.bar-feedback { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.bar-feedback button { flex:none; min-height:40px; }
+.measure .bar-number { padding:0; min-height:40px; color:#175c51; background:#e5f4ed; font-size:13px; }
+.measure,.measure-labels { grid-template-columns:40px minmax(48px,1fr) minmax(0,2fr) 36px; }

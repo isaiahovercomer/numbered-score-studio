@@ -1,3 +1,4 @@
+import {connectBarListening} from './bar-listening.js';
 import {connectMobileWorkspace} from './mobile-workspace.js';
 import {connectTour} from './tour.js';
 import {connectProjectSession} from './project-session.js';
@@ -11,7 +12,7 @@ import {$} from './dom.js';
 import {buildMixer} from './mixer.js';
 import {transposeScore, buildForm} from './score-edit.js';
 import {registerModelContext} from './webmcp.js';
-let session;
+let session, listening;
 let score,
   current,
   config = {},
@@ -37,6 +38,7 @@ function invalidate() {
   $('download').hidden = true;
 }
 function changed() {
+  listening?.update();
   session?.capture();
   invalidate();
   try {
@@ -58,6 +60,7 @@ function changed() {
   );
 }
 function editor() {
+  listening?.update();
   $('sectionTabs').replaceChildren(
     ...Object.keys(score.sections).map(s => {
       const b = document.createElement('button');
@@ -75,7 +78,11 @@ function editor() {
     ...score.sections[current].map((bar, i) => {
       const row = document.createElement('div');
       row.className = 'measure';
-      const n = document.createElement('span');
+      const n = document.createElement('button');
+      n.type = 'button';
+      n.className = 'bar-number';
+      n.setAttribute('aria-label', `試聽${label(current)}第 ${i + 1} 小節原錄音`);
+      n.onclick = () => listening?.play(i);
       n.textContent = String(i + 1).padStart(2, '0');
       const ch = document.createElement('input');
       ch.value = bar.chordChanges?.length
@@ -130,8 +137,9 @@ function editor() {
     })
   );
 }
-function installScore(s) {
+function installScore(s, keepAlignment = false) {
   validateScore(s);
+  if (!keepAlignment) listening?.clearMap();
   score = structuredClone(s);
   current = Object.keys(score.sections)[0];
   $('title').value = score.title || '未命名樂曲';
@@ -362,7 +370,9 @@ try {
 } catch {}
 if (!config.recognitionEndpoint)
   $('aiInfo').textContent = 'AI 讀譜尚未啟用。你仍可載入圖片對照、匯入 JSON 或編輯音符，並免費產生音樂。';
-const studio = connectStudio({getScore: currentScore, installScore, status, download, lock, isBusy: () => busy});
+const studio = connectStudio({getScore: currentScore, installScore, status, download, lock, isBusy: () => busy,
+  updateScore: s => installScore(s, true), onTranscribed: result => listening?.setMap(result)});
+listening = connectBarListening(studio.review, () => ({score, current, name: label(current)}));
 await example();
 session = connectProjectSession({getScore: currentScore, installScore, isBusy: () => busy});
 await session.start();

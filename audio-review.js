@@ -31,8 +31,9 @@ export function connectAudioReview(player) {
   player.after(panel);
   const el = id => panel.querySelector('#' + id);
   let loop = null;
-  let revision = 0;
+  let revision = 0, timer;
   const stop = () => {
+    clearTimeout(timer);
     revision++;
     loop = null;
     el('reviewLoop').textContent = '循環播放片段';
@@ -84,13 +85,27 @@ export function connectAudioReview(player) {
       el('reviewStatus').textContent = playing ? '無法開始播放，請按播放器重試。' : e.message;
     }
   };
+  function boundary() {
+    if (!loop?.bar || player.paused) return;
+    if (player.currentTime < loop.start - 0.01) player.currentTime = loop.start;
+    if (player.currentTime >= loop.end) {
+      if (loop.repeat) player.currentTime = loop.start;
+      else { player.pause(); stop(); return; }
+    }
+    clearTimeout(timer);
+    timer = setTimeout(boundary, Math.max(20, (loop.end - player.currentTime) * 1000 / player.playbackRate));
+  }
+  for (const event of ['playing', 'seeked', 'ratechange']) player.addEventListener(event, boundary);
+  player.addEventListener('pause', () => clearTimeout(timer));
   player.addEventListener('timeupdate', () => {
+    if (loop?.bar) { boundary(); return; }
     if (loop && !player.paused && (player.currentTime >= loop.end || player.currentTime < loop.start)) {
       player.currentTime = loop.start;
     }
   });
   player.addEventListener('ended', () => {
     if (!loop) return;
+    if (loop.bar && !loop.repeat) { stop(); return; }
     player.currentTime = loop.start;
     const operation = revision;
     player.play().catch(e => {
@@ -99,4 +114,24 @@ export function connectAudioReview(player) {
       if (e.name !== 'AbortError') el('reviewStatus').textContent = '請按播放器繼續播放。';
     });
   });
+  return {
+    cancelBar() { if (loop?.bar) { player.pause(); stop(); } },
+    async playBar(range, repeat) {
+      stop();
+      const operation = revision;
+      loop = {...range, bar: true, repeat};
+      el('reviewStart').value = range.start.toFixed(2);
+      el('reviewEnd').value = range.end.toFixed(2);
+      el('reviewLoop').textContent = '停止小節對聽';
+      el('reviewLoop').setAttribute('aria-pressed', 'true');
+      player.currentTime = range.start;
+      try { await player.play(); boundary(); }
+      catch (e) {
+        if (revision !== operation) return;
+        stop();
+        throw Error('無法播放原錄音，請重新選取錄音或按播放器重試。');
+      }
+    }
+  };
 }
+

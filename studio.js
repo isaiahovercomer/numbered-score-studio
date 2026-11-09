@@ -5,12 +5,14 @@ import {connectWordExport} from './studio-word.js';
 import {connectLyrics} from './studio-lyrics.js';
 import {connectChords} from './studio-chords.js';
 
-export function connectStudio({getScore, installScore, status, download, lock, isBusy}) {
-  connectAudioReview(document.getElementById('sourcePlayer'));
+export function connectStudio({
+  getScore, installScore, status, download, lock, isBusy, onTranscribed, updateScore = installScore}) {
+  const review = connectAudioReview(document.getElementById('sourcePlayer'));
   const chordState = {timeline: []};
-  connectAnalysis({installScore, status, lock, isBusy, chordState});
+  connectAnalysis({installScore, status, lock, isBusy, chordState, onTranscribed});
   connectWordExport({getScore, status, download});
-  const {updateCount} = connectLyrics({getScore, installScore, status});
-  connectChords({getScore, installScore, status, download, chordState});
-  return {updateCount};
+  const {updateCount} = connectLyrics({getScore, installScore: updateScore, status});
+  connectChords({getScore, installScore: updateScore, status, download, chordState});
+  return {updateCount, review};
 }
+
