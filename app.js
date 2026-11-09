@@ -1,3 +1,4 @@
+import {connectMobileWorkspace} from './mobile-workspace.js';
 import {connectTour} from './tour.js';
 import {connectProjectSession} from './project-session.js';
 import {connectStudio} from './studio.js';
@@ -336,6 +337,7 @@ $('imageFile').onchange = async e => {
 };
 $('recognize').onclick = async () => {
   if (!imageData || !config.recognitionEndpoint || busy) return;
+  if (!navigator.onLine) { status('AI 讀譜需要網路；離線時仍可手動校對及匯出 Word。', true); return; }
   try {
     lock(true);
     status('AI 正在讀取簡譜，約需 30–90 秒…');
@@ -377,4 +379,5 @@ registerModelContext({
 });
 
 
+connectMobileWorkspace();
 connectTour();

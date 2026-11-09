@@ -52,3 +52,25 @@
   .tour-card h2 { font-size: 19px; }
   .tour-actions button { font-size: 14px; padding: 10px; }
 }
+
+.app-tools { display:flex; align-items:center; flex-wrap:wrap; gap:8px 16px; padding:14px 18px;
+  background:#f9fcfb; border:1px solid #c8dcd6; border-radius:14px; margin:0 0 18px; }
+.app-tools strong { color:#194a40; }
+.app-tools p { font-size:14px; line-height:1.5; margin:0; }
+.app-tools .app-help { flex-basis:100%; color:#465d69; }
+.app-tools button { margin-left:auto; min-height:44px; }
+.mobile-nav { display:none; }
+@media (max-width:720px) {
+  body { padding-bottom:calc(72px + env(safe-area-inset-bottom)); }
+  .mobile-nav { display:flex; position:fixed; z-index:12; inset:auto 0 0; gap:5px;
+    padding:6px max(10px,env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom))
+    max(10px,env(safe-area-inset-left)); background:#122639; box-shadow:0 -2px 14px #12263928; }
+  .mobile-nav a { flex:1; display:flex; align-items:center; justify-content:center; gap:6px; min-height:44px;
+    border-radius:8px; color:#ebf6f2; text-decoration:none; font-weight:700; }
+  .mobile-nav small { font-size:11px; }
+  .mobile-nav a[aria-current] { background:#c9f2e3; color:#133b32; }
+  .workspace > .panel { scroll-margin-top:8px; }
+  .intro { padding:20px 2px 14px; }
+  .app-tools { padding:12px; }
+  .measure input { font-size:16px; }
+}

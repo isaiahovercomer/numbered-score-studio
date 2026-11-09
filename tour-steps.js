@@ -1,5 +1,5 @@
 // 新功能導覽：增加版本號，新增 since 同版本的步驟；既有訪客只會看到新增步驟。
-export const TOUR_VERSION = 1;
+export const TOUR_VERSION = 2;
 export const TOUR_KEY = 'numbered-score-studio.tour-version';
 export const TOUR_STEPS = [
   {since: 1, target: '.source-tabs', title: '先選擇你的創作來源',
@@ -15,7 +15,9 @@ export const TOUR_STEPS = [
   {since: 1, target: '#exportWord', title: '下載可編輯的 Word 詞譜',
     text: '展開上方「Word 版式」可選紙張與歌詞排法，再下載 Word。請在開啟 Word 的裝置安裝 01SMN 與標楷體；長譜會自動分頁。'},
   {since: 1, target: '#preview', title: '先試聽，再帶走完整作品',
-    text: '先聽前 8 小節確認旋律與編曲，再產生完整 MP3。下方也能下載 MIDI、MusicXML 和 JSON。隨時可從頁首「使用教學」重看。'}
+    text: '先聽前 8 小節確認旋律與編曲，再產生完整 MP3。下方也能下載 MIDI、MusicXML 和 JSON。隨時可從頁首「使用教學」重看。'},
+  {since: 2, target: '#appTools', title: '把譜間放到手機主畫面',
+    text: '點「加入主畫面」開啟安裝或查看步驟。手機底部可切換匯入、校對、匯出；看到「可離線使用」後，沒有網路也能開啟詞譜、修改並下載 Word。'}
 ];
 export function tourSteps(seen, version = TOUR_VERSION, steps = TOUR_STEPS) {
   const previous = Number.isInteger(seen) && seen >= 0 ? seen : 0;
